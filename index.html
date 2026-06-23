@@ -1188,6 +1188,15 @@
     let levelBasketsScored = 0;
     let strikes = 0;
 
+    const LEVEL_WORDS = {
+      1: ["CAT", "DOG", "PIG"],
+      2: ["PLAY", "JUMP", "FROG"],
+      3: ["KABOOM", "WACKY", "SLING"],
+      4: ["SPELLED", "VICTORY", "WACKIEST"]
+    };
+    let currentWord = "";
+    let completedWords = [];
+
     // Load highscore
     let highScore = parseInt(localStorage.getItem("wacky_highscore") || "0");
     document.getElementById("start-highscore-badge").innerText = `High Score: ${highScore}`;
@@ -1489,8 +1498,13 @@
         z(1)
       ]);
 
-      // Draw Letter Bubbles for spelling
-      const wordArr = config.word.split("");
+      // Re-select a random word for the level if starting fresh
+      if (!currentWord || completedWords.length === 0) {
+        selectRandomWord();
+      }
+
+      // Draw Letter Bubbles for spelling (initially all blanks)
+      const wordArr = currentWord.split("");
       const LETTER_SPACING = 36;
       const startX = W / 2 - ((wordArr.length - 1) * LETTER_SPACING) / 2;
       const bubbleY = 64;
@@ -1517,9 +1531,9 @@
           z(2)
         ]);
 
-        // The text letter itself
+        // The text letter itself (blank initially)
         const txt = add([
-          text(wordArr[i], { size: 14, font: "monospace" }),
+          text("_", { size: 14, font: "monospace" }),
           pos(lx, bubbleY),
           anchor("center"),
           color(100, 100, 120),
@@ -1604,6 +1618,7 @@
             dir: i % 2 === 0 ? 1 : -1,
             scored: false,
             netRef: net,
+            letter: "",
             draw() {
               // Rims
               const topY = -HOOP_H / 2;
@@ -1624,13 +1639,14 @@
                 color: rgb(...PAL.hoopRim),
               });
               
-              // Basket symbol
+              // Hoop letter symbol
               drawText({
-                text: "O",
-                size: 18,
+                text: this.letter || "",
+                size: 20,
                 font: "monospace",
-                pos: vec2(-6, -10),
-                color: rgb(...PAL.hoopRim),
+                pos: vec2(0, -1),
+                anchor: "center",
+                color: rgb(255, 255, 255),
               });
             }
           }
@@ -1660,6 +1676,9 @@
         hoops.push(hoop);
         netObjects.push(net);
       }
+
+      // Assign initial letters to hoops
+      assignHoopLetters();
 
       // Floating rotating bouncy obstacle (Level 3+)
       if (config.hasObstacle) {
@@ -2090,11 +2109,6 @@
             h.opacity = 0.9;
             wait(0.2, () => h.opacity = 0.24);
 
-            // Increment score variables
-            totalGameScore += 25; 
-            levelBasketsScored++;
-            totalBasketsScored++;
-
             sfx.playScore();
             spawnSparks(h.pos.x, h.pos.y);
 
@@ -2103,8 +2117,19 @@
               spawnWatermelonSplat(h.pos.x, h.pos.y);
             }
 
-            // Light next spelling letter
-            lightUpNextLetter();
+            // CHECK CORRECT LETTER
+            const correctLetter = currentWord[currentLetterIndex];
+            if (h.letter === correctLetter) {
+              // Increment score variables for correct spelling
+              totalGameScore += 25; 
+              levelBasketsScored++;
+              totalBasketsScored++;
+              
+              lightUpNextLetter();
+            } else {
+              // Wrong letter scored => Strike penalty!
+              triggerStrike();
+            }
           }
         }
       }
@@ -2211,9 +2236,12 @@
 
       // spelling letter activation progress
       function lightUpNextLetter() {
-        if (currentLetterIndex < wordArr.length) {
+        if (currentLetterIndex < currentWord.length) {
           const bubble = letterBubbles[currentLetterIndex];
           
+          // Reveal the correct letter on the target word
+          bubble.txt.text = bubble.letter;
+
           // Update colors to gold glowing
           bubble.bg.color = rgb(...PAL.star);
           bubble.bg.opacity = 1.0;
@@ -2240,9 +2268,12 @@
 
           currentLetterIndex++;
 
-          // Level Cleared Conditions
-          if (currentLetterIndex === wordArr.length) {
-            wait(0.5, triggerLevelWin);
+          // Level/Word Cleared Conditions
+          if (currentLetterIndex === currentWord.length) {
+            wait(0.5, triggerWordWin);
+          } else {
+            // Assign next set of random letters to the outfield hoops
+            assignHoopLetters();
           }
         }
       }
@@ -2754,6 +2785,15 @@
       screenVictory.classList.add("hidden");
       screenFail.classList.add("hidden");
       
+      // Clean up penalty overlays
+      penaltyOverlay.classList.add("hidden");
+      waterSplash.classList.add("hidden");
+      bucketContainer.className = "";
+      wipeCount = 0;
+
+      completedWords = [];
+      currentWord = "";
+
       isMenuPaused = false;
       go("game");
     }
@@ -2833,6 +2873,8 @@
     btnRestartLevel.addEventListener("click", () => {
       sfx.playClick();
       isMenuPaused = false;
+      completedWords = [];
+      currentWord = "";
       screenPause.classList.add("hidden");
       go("game");
     });
@@ -2862,7 +2904,7 @@
       document.getElementById("strike-hud").classList.add("hidden");
       
       document.getElementById("lvlup-subtitle").innerText = `Complete: ${lvlConfig.name}`;
-      document.getElementById("lvlup-stat-word").innerText = lvlConfig.word;
+      document.getElementById("lvlup-stat-word").innerText = completedWords.join(", ");
       document.getElementById("lvlup-stat-shots").innerText = levelShotsFired;
       document.getElementById("lvlup-stat-baskets").innerText = levelBasketsScored;
       document.getElementById("lvlup-stat-score").innerText = `+${levelBasketsScored * 25}`;
@@ -2877,6 +2919,8 @@
       currentLevelIndex++;
       if (currentLevelIndex < LEVELS.length) {
         isMenuPaused = false;
+        completedWords = [];
+        currentWord = "";
         go("game");
       } else {
         // All cleared -> Victory Screen
@@ -2913,11 +2957,10 @@
 
     // Level Fail overlay display
     function showFailOverlay() {
-      const lvlConfig = LEVELS[currentLevelIndex];
       document.getElementById("strike-hud").classList.add("hidden");
 
-      document.getElementById("fail-stat-word").innerText = lvlConfig.word;
-      document.getElementById("fail-stat-letters").innerText = `${currentLetterIndex} / ${lvlConfig.word.length}`;
+      document.getElementById("fail-stat-word").innerText = currentWord;
+      document.getElementById("fail-stat-letters").innerText = `${currentLetterIndex} / ${currentWord.length}`;
 
       screenFail.classList.remove("hidden");
     }
@@ -2926,6 +2969,8 @@
       sfx.playClick();
       screenFail.classList.add("hidden");
       isMenuPaused = false;
+      completedWords = [];
+      currentWord = "";
       go("game");
     });
 
@@ -2944,6 +2989,117 @@
       levelShotsFired = 0;
       levelBasketsScored = 0;
       strikes = 0;
+      completedWords = [];
+      currentWord = "";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  RANDOM DICTIONARY SPELLING ENGINE HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+    function selectRandomWord() {
+      const words = LEVEL_WORDS[currentLevelIndex + 1];
+      const availableWords = words.filter(w => !completedWords.includes(w));
+      
+      if (availableWords.length === 0) {
+        triggerLevelWin();
+        return null;
+      }
+      
+      currentWord = availableWords[Math.floor(rand(0, availableWords.length))];
+      return currentWord;
+    }
+
+    function triggerWordWin() {
+      completedWords.push(currentWord);
+      
+      sfx.playWin();
+      addConfetti({ pos: vec2(W / 2, H / 3) });
+
+      const winText = add([
+        text(`"${currentWord}" Spelled!`, { size: 20, font: "monospace" }),
+        pos(W / 2, H / 2),
+        anchor("center"),
+        color(255, 210, 60),
+        z(10),
+        lifespan(1.5)
+      ]);
+
+      wait(1.5, () => {
+        const nextW = selectRandomWord();
+        if (nextW) {
+          rebuildLetterBubbles();
+        }
+      });
+    }
+
+    function rebuildLetterBubbles() {
+      letterBubbles.forEach(b => {
+        destroy(b.bg);
+        destroy(b.txt);
+        destroy(b.outlineCircle);
+      });
+      letterBubbles = [];
+      
+      currentLetterIndex = 0;
+
+      const wordArr = currentWord.split("");
+      const LETTER_SPACING = 36;
+      const startX = W / 2 - ((wordArr.length - 1) * LETTER_SPACING) / 2;
+      const bubbleY = 64;
+
+      for (let i = 0; i < wordArr.length; i++) {
+        const lx = startX + i * LETTER_SPACING;
+        
+        const outlineCircle = add([
+          circle(15),
+          pos(lx, bubbleY),
+          color(40, 40, 75),
+          opacity(0.4),
+          z(1)
+        ]);
+
+        const bg = add([
+          circle(14),
+          pos(lx, bubbleY),
+          color(20, 20, 36),
+          opacity(0.9),
+          scale(1),
+          z(2)
+        ]);
+
+        const txt = add([
+          text("_", { size: 14, font: "monospace" }),
+          pos(lx, bubbleY),
+          anchor("center"),
+          color(100, 100, 120),
+          scale(1),
+          z(3)
+        ]);
+
+        letterBubbles.push({ bg, txt, outlineCircle, letter: wordArr[i] });
+      }
+
+      assignHoopLetters();
+    }
+
+    function assignHoopLetters() {
+      if (currentLetterIndex >= currentWord.length) return;
+      const correctLetter = currentWord[currentLetterIndex];
+      
+      const correctHoopIdx = Math.floor(rand(0, hoops.length));
+      
+      hoops.forEach((hoop, idx) => {
+        if (idx === correctHoopIdx) {
+          hoop.letter = correctLetter;
+        } else {
+          let randomL;
+          const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+          do {
+            randomL = alphabet[Math.floor(rand(0, alphabet.length))];
+          } while (randomL === correctLetter);
+          hoop.letter = randomL;
+        }
+      });
     }
   </script>
 </body>

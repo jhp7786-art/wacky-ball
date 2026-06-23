@@ -9,11 +9,12 @@ Wacky Ball is a premium, high-fidelity slingshot spelling arcade game built on t
 - **Parallax Starry Backgrounds**: Premium visuals featuring glassmorphism menu cards, parallax background stars, and particle confetti arpeggios.
 - **Damped Harmonic Net Physics**: Hoops are attached to springy net physics that vibrate realistically when scored.
 - **Sound Synth Engine**: Synthesizes custom game SFX (clicks, launch sweeps, bounces, score arpeggios, detuned alarm buzzers, and squeaky squeegee swipes) directly using the Web Audio API without asset lag.
-- **4 Dynamic Levels**:
-  - **Level 1**: Standard unmoving hoops (spells `COLSON`).
-  - **Level 2**: Floaty left-and-right moving hoops (spells `WACKY`).
-  - **Level 3**: Floating center bounce shield obstacle (spells `KABOOM`).
-  - **Level 4**: Sidelining wind gusts modifying aim trajectories (spells `SPELLED`).
+- **4 Dynamic Levels & Word Dictionaries**:
+  - **Level 1**: Standard unmoving hoops. Dictionaries: `["CAT", "DOG", "PIG"]`
+  - **Level 2**: Floaty left-and-right moving hoops. Dictionaries: `["PLAY", "JUMP", "FROG"]`
+  - **Level 3**: Floating center bounce shield obstacle. Dictionaries: `["KABOOM", "WACKY", "SLING"]`
+  - **Level 4**: Sidelining wind gusts modifying aim trajectories. Dictionaries: `["SPELLED", "VICTORY", "WACKIEST"]`
+- **Randomized Spelling Mechanics**: When a level starts, a word is chosen randomly from the level's dictionary. Outfield hoops are dynamically assigned letters (with the correct next letter guaranteed on at least one hoop). Hitting the correct hoop advances the spelling (blanks reveal letters), while hitting a wrong hoop triggers a Strike penalty. Winning a word triggers confetti before moving to the next word. Completing all words in the level advances the level.
 
 ---
 
