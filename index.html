@@ -1,0 +1,2950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Wacky Ball: Spellbound! 🎯</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="A premium slingshot spelling game built with Kaboom.js. Pull back, aim, and shoot the wacky ball to light up letters and spell words across multiple dynamic levels!" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  
+  <style>
+    :root {
+      --bg-color: #050510;
+      --panel-bg: rgba(12, 12, 32, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --glow-blue: 0 0 15px rgba(60, 210, 255, 0.4);
+      --glow-red: 0 0 15px rgba(255, 80, 80, 0.4);
+      --text-glow: 0 0 8px rgba(255, 255, 255, 0.3);
+      --primary-gradient: linear-gradient(135deg, #ff5050, #ff80a0);
+      --secondary-gradient: linear-gradient(135deg, #3cd2ff, #78a0ff);
+      --gold-gradient: linear-gradient(135deg, #ffd23c, #ffaa00);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-color);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+
+    /* Game Container limiting canvas to 480x720 centered */
+    #game-container {
+      width: 480px;
+      height: 720px;
+      position: relative;
+      background: #080816;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(60, 210, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Absolute canvas */
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* CSS UI Overlays */
+    .overlay-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      background: rgba(6, 6, 18, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      opacity: 1;
+      pointer-events: all;
+      transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .overlay-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1.05);
+    }
+
+    /* General utility for hiding elements */
+    .hidden {
+      display: none !important;
+    }
+
+    /* Specific smooth-fade utility for strike splash alert */
+    #strike-alert.hidden {
+      display: block !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .menu-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Logo Image Styling */
+    .logo-img {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      box-shadow: var(--glow-red);
+      border: 2px solid rgba(255, 80, 80, 0.5);
+      animation: floatLogo 4s ease-in-out infinite;
+    }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    h1 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 30px;
+      color: #ffffff;
+      margin-bottom: 6px;
+      text-shadow: var(--text-glow);
+      font-weight: 700;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #9ba4cf;
+      margin-bottom: 24px;
+      font-weight: 400;
+    }
+
+    .score-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 14px;
+      color: #ffd23c;
+      font-weight: 600;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Elegant Custom Buttons */
+    .btn {
+      width: 100%;
+      max-width: 240px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      box-shadow: 0 4px 15px rgba(255, 80, 80, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 80, 80, 0.5);
+    }
+    .btn-primary:active { transform: translateY(1px); }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      transform: translateY(-2px);
+    }
+
+    /* Sound and Pause Top Bar */
+    .hud-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .hud-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(12, 12, 32, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      backdrop-filter: blur(5px);
+      transition: all 0.2s;
+    }
+    .hud-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(1.05);
+    }
+    .hud-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* Discard Recycle Button */
+    #btn-discard {
+      position: absolute;
+      bottom: 84px;
+      right: 12px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8c96be;
+      z-index: 5;
+      backdrop-filter: blur(5px);
+      transition: all 0.2s;
+    }
+    #btn-discard:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      transform: scale(1.1);
+    }
+    #btn-discard svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    /* Pulsing Alert styling for discard button when a Hazard is loaded */
+    @keyframes pulseRed {
+      0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 80, 80, 0.4);
+        border-color: rgba(255, 80, 80, 0.4);
+        color: #ff5050;
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(255, 80, 80, 0.9);
+        border-color: rgba(255, 80, 80, 0.9);
+        background: rgba(255, 80, 80, 0.2);
+        color: #ff8080;
+      }
+    }
+    #btn-discard.pulse-alert {
+      animation: pulseRed 1.2s infinite;
+    }
+
+    /* Level Selection Grid */
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .lvl-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .lvl-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(60, 210, 255, 0.4);
+      transform: translateY(-2px);
+    }
+    .lvl-card.active {
+      background: rgba(60, 210, 255, 0.12);
+      border-color: #3cd2ff;
+      box-shadow: var(--glow-blue);
+    }
+    .lvl-card-num {
+      font-size: 12px;
+      font-weight: 700;
+      color: #3cd2ff;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .lvl-card-word {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .lvl-card-desc {
+      font-size: 10px;
+      color: #8c96be;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* Stat Rows for Win Screens */
+    .stats-container {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .stat-row:last-child { margin-bottom: 0; }
+    .stat-label { color: #8e98b9; }
+    .stat-val { color: #ffffff; font-weight: 600; }
+
+    /* Keyboard Help Box */
+    .keyboard-help {
+      font-size: 11px;
+      color: #636b8e;
+      margin-top: 16px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      max-width: 280px;
+    }
+
+    /* Level Indicator HUD */
+    #lvl-hud {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(12, 12, 32, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 10px;
+      backdrop-filter: blur(5px);
+      z-index: 5;
+    }
+    #lvl-hud span {
+      color: #3cd2ff;
+      font-weight: 800;
+    }
+
+    /* Strike HUD top left under level HUD */
+    #strike-hud {
+      position: absolute;
+      top: 54px;
+      left: 14px;
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+      background: rgba(12, 12, 32, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 5px 14px;
+      border-radius: 12px;
+      backdrop-filter: blur(5px);
+      transition: opacity 0.3s;
+    }
+    #strike-hud.hidden {
+      display: none;
+    }
+    .strike-x {
+      color: rgba(255, 255, 255, 0.15);
+      font-weight: 800;
+      font-size: 18px;
+      font-family: 'Fredoka', sans-serif;
+      transition: all 0.3s;
+    }
+    .strike-x.active {
+      color: #ff5050;
+      text-shadow: 0 0 10px rgba(255, 80, 80, 0.6);
+      transform: scale(1.2);
+    }
+
+    /* Penalty Overlay Container */
+    #penalty-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 25;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+    }
+    #penalty-overlay.hidden {
+      display: none !important;
+    }
+
+    /* Giant Bucket Shadow Container */
+    #bucket-shadow-container {
+      width: 180px;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: scale(0) rotate(0deg);
+      opacity: 0;
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
+    }
+    #bucket-shadow-container.grow {
+      transform: scale(1.6) rotate(0deg);
+      opacity: 1;
+    }
+    #bucket-shadow-container.tip {
+      transform: scale(1.6) rotate(-75deg) translate(-30px, -20px);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #bucket-shadow-container.fade-out {
+      opacity: 0;
+      transform: scale(1.8) rotate(-90deg) translate(-50px, -40px);
+      transition: all 0.3s;
+    }
+
+    #bucket-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.8));
+    }
+
+    /* Water Splash Overlay */
+    #water-splash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(60, 160, 255, 0.55) 0%, rgba(20, 80, 220, 0.68) 100%);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #water-splash.show {
+      opacity: 1;
+    }
+
+    /* Wet glass droplets effect */
+    .water-drip {
+      position: absolute;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
+      width: 6px;
+      height: 40px;
+      border-radius: 3px;
+      opacity: 0.75;
+      animation: dripAnimation 4s infinite linear;
+    }
+    .drip-1 { left: 15%; top: -40px; animation-delay: 0.2s; animation-duration: 3.5s; }
+    .drip-2 { left: 35%; top: -40px; animation-delay: 1.5s; animation-duration: 4.5s; }
+    .drip-3 { left: 55%; top: -40px; animation-delay: 0.8s; animation-duration: 3.8s; }
+    .drip-4 { left: 75%; top: -40px; animation-delay: 2.2s; animation-duration: 4.8s; }
+    .drip-5 { left: 90%; top: -40px; animation-delay: 1.1s; animation-duration: 4.0s; }
+
+    @keyframes dripAnimation {
+      0% { transform: translateY(0); height: 30px; opacity: 0.8; }
+      70% { height: 60px; opacity: 0.6; }
+      100% { transform: translateY(800px); height: 15px; opacity: 0; }
+    }
+
+    .wipe-instruction {
+      background: rgba(12, 12, 32, 0.75);
+      border: 1.5px solid rgba(60, 210, 255, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 100, 255, 0.3), 0 0 20px rgba(60, 210, 255, 0.2);
+      border-radius: 24px;
+      padding: 30px 24px;
+      width: 85%;
+      max-width: 320px;
+      text-align: center;
+      animation: pulseGlow 2s infinite ease-in-out;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #water-splash.show .wipe-instruction {
+      transform: scale(1.0);
+    }
+
+    .wipe-icon {
+      font-size: 44px;
+      display: inline-block;
+      animation: wobbleIcon 2s infinite ease-in-out;
+    }
+
+    @keyframes wobbleIcon {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(-10deg) scale(1.1); }
+    }
+
+    .wipe-instruction h2 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 24px;
+      color: #3cd2ff;
+      margin: 12px 0 6px;
+      text-shadow: 0 0 10px rgba(60, 210, 255, 0.5);
+    }
+
+    .wipe-instruction p {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+    }
+
+    .wipe-instruction p span {
+      color: #ffd23c;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .wipe-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #wipe-progress-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #3cd2ff, #78a0ff);
+      transition: width 0.3s ease;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 10px 30px rgba(0, 100, 255, 0.3); }
+      50% { box-shadow: 0 10px 45px rgba(0, 150, 255, 0.6); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    
+    <!-- Top HUD Overlays -->
+    <div id="lvl-hud">
+      Level <span id="lvl-num-text">1</span>: <span id="lvl-name-text">COLSON</span>
+    </div>
+
+    <!-- Strike Status HUD -->
+    <div id="strike-hud" class="hidden">
+      <span class="strike-x" id="strike-1">X</span>
+      <span class="strike-x" id="strike-2">X</span>
+      <span class="strike-x" id="strike-3">X</span>
+    </div>
+
+    <div class="hud-controls">
+      <button class="hud-btn" id="btn-sound" title="Toggle Sound">
+        <!-- Sound Icon (On) -->
+        <svg id="svg-sound-on" viewBox="0 0 24 24">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+        <!-- Sound Icon (Muted) -->
+        <svg id="svg-sound-off" viewBox="0 0 24 24" style="display:none;">
+          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+        </svg>
+      </button>
+      <button class="hud-btn" id="btn-pause" title="Pause Game">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Discard current projectile button (Recycle swap) -->
+    <button id="btn-discard" class="hidden" title="Discard Current Item (Clicks Batter too)">
+      <svg viewBox="0 0 24 24">
+        <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
+      </svg>
+    </button>
+
+    <!-- Strike Splash Alert Overlay -->
+    <div id="strike-alert" class="hidden" style="position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%); color: #ff5050; font-family: 'Fredoka', sans-serif; font-size: 52px; font-weight: 800; text-shadow: 0 0 25px rgba(255, 80, 80, 0.9); z-index: 15; pointer-events: none; transition: opacity 0.15s;">
+      STRIKE!
+    </div>
+
+    <!-- Penalty Splash & Wipe Overlay -->
+    <div id="penalty-overlay" class="hidden">
+      <!-- Giant bucket shadow silhouette -->
+      <div id="bucket-shadow-container">
+        <svg id="bucket-svg" viewBox="0 0 100 100">
+          <path d="M20 40 C20 15, 80 15, 80 40" stroke="rgba(255, 255, 255, 0.2)" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M25 40 L32 85 C33 90, 67 90, 68 85 L75 40 Z" fill="rgba(10, 10, 20, 0.85)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="40" rx="25" ry="6" fill="rgba(20, 20, 35, 0.9)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <!-- Water splash overlay -->
+      <div id="water-splash" class="hidden">
+        <!-- Dripping droplets styling -->
+        <div class="water-drip drip-1"></div>
+        <div class="water-drip drip-2"></div>
+        <div class="water-drip drip-3"></div>
+        <div class="water-drip drip-4"></div>
+        <div class="water-drip drip-5"></div>
+        <div class="wipe-instruction">
+          <span class="wipe-icon">💦</span>
+          <h2>SCREEN IS WET!</h2>
+          <p>Tap or Swipe <span id="wipe-remaining">3</span> times to wipe it away!</p>
+          <div class="wipe-progress-bar"><div id="wipe-progress-fill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start Screen Overlay -->
+    <div class="overlay-screen" id="start-screen">
+      <div class="menu-card">
+        <img src="wacky_ball_logo.png" class="logo-img" alt="Wacky Ball Logo" />
+        <h1>Wacky Ball</h1>
+        <div class="subtitle">Spellbound Edition</div>
+        
+        <div class="score-badge" id="start-highscore-badge">
+          High Score: 0
+        </div>
+
+        <button class="btn btn-primary" id="btn-play-game">
+          PLAY GAME
+        </button>
+        <button class="btn btn-secondary" id="btn-show-lvl-select">
+          LEVEL SELECT
+        </button>
+
+        <div class="keyboard-help">
+          🎮 <b>Controls:</b><br/>
+          • Drag batter backwards & release to shoot.<br/>
+          • Click the **Batter / Discard Button** to swap items!<br/>
+          • Use **Arrow Keys** to aim, **Spacebar** to shoot.
+        </div>
+      </div>
+    </div>
+
+    <!-- Level Select Overlay -->
+    <div class="overlay-screen hidden" id="lvl-select-screen">
+      <div class="menu-card">
+        <h1>Select Level</h1>
+        <div class="subtitle">Spell the words, conquer the hurdles!</div>
+
+        <div class="level-grid" id="lvl-grid-container">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <button class="btn btn-secondary" id="btn-back-lvl-select">
+          BACK TO MENU
+        </button>
+      </div>
+    </div>
+
+    <!-- Pause Menu Overlay -->
+    <div class="overlay-screen hidden" id="pause-screen">
+      <div class="menu-card">
+        <h1>Game Paused</h1>
+        <div class="subtitle">Spellbound slingshot action</div>
+
+        <button class="btn btn-primary" id="btn-resume-game">
+          RESUME
+        </button>
+        <button class="btn btn-secondary" id="btn-restart-level">
+          RESTART LEVEL
+        </button>
+        <button class="btn btn-secondary" id="btn-quit-game">
+          QUIT TO MENU
+        </button>
+      </div>
+    </div>
+
+    <!-- Level Complete / Level Up Overlay -->
+    <div class="overlay-screen hidden" id="levelup-screen">
+      <div class="menu-card">
+        <h1 style="color: #ffd23c;">🎉 Word Spelled!</h1>
+        <div class="subtitle" id="lvlup-subtitle">Level 1 Complete</div>
+
+        <div class="stats-container">
+          <div class="stat-row">
+            <span class="stat-label">Word:</span>
+            <span class="stat-val" id="lvlup-stat-word" style="color: #3cd2ff; font-weight: 800; letter-spacing: 1px;">COLSON</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Shots Fired:</span>
+            <span class="stat-val" id="lvlup-stat-shots">5</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Baskets Scored:</span>
+            <span class="stat-val" id="lvlup-stat-baskets">6</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Score Gained:</span>
+            <span class="stat-val" id="lvlup-stat-score" style="color: #22c55e;">+150</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-next-level">
+          NEXT LEVEL
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Cleared / Victory Overlay -->
+    <div class="overlay-screen hidden" id="victory-screen">
+      <div class="menu-card">
+        <img src="wacky_ball_logo.png" class="logo-img" alt="Wacky Ball Logo" style="width: 100px; height: 100px;" />
+        <h1 style="color: #ffd23c;">🏆 GAME CLEARED!</h1>
+        <div class="subtitle">You are the ultimate Speller!</div>
+
+        <div class="stats-container">
+          <div class="stat-row">
+            <span class="stat-label">Total Score:</span>
+            <span class="stat-val" id="win-stat-score" style="color: #ffd23c; font-size: 18px; font-weight: 800;">520</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Shots:</span>
+            <span class="stat-val" id="win-stat-shots">14</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Spelling Accuracy:</span>
+            <span class="stat-val" id="win-stat-accuracy" style="color: #3cd2ff;">85%</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-win-replay">
+          PLAY AGAIN
+        </button>
+        <button class="btn btn-secondary" id="btn-win-menu">
+          MAIN MENU
+        </button>
+      </div>
+    </div>
+
+    <!-- Level Failed / 3 Strikes Overlay -->
+    <div class="overlay-screen hidden" id="fail-screen">
+      <div class="menu-card" style="border-color: rgba(255, 80, 80, 0.4); box-shadow: var(--glow-red);">
+        <h1 style="color: #ff5050;">⚠️ LEVEL FAILED</h1>
+        <div class="subtitle">3 Strikes! Avoid launching Hazards!</div>
+        
+        <div class="stats-container" style="background: rgba(255,80,80,0.05); border-color: rgba(255,80,80,0.15);">
+          <div class="stat-row">
+            <span class="stat-label">Failed Word:</span>
+            <span class="stat-val" id="fail-stat-word" style="color: #ff8080;">COLSON</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Letters Lit:</span>
+            <span class="stat-val" id="fail-stat-letters">3 / 6</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-retry-level">
+          RETRY LEVEL
+        </button>
+        <button class="btn btn-secondary" id="btn-fail-menu">
+          MAIN MENU
+        </button>
+      </div>
+    </div>
+
+    <!-- Kaboom canvas -->
+    <canvas id="game-canvas"></canvas>
+
+  </div>
+
+  <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.js"></script>
+  <script>
+    // ─────────────────────────────────────────────────────────────────────────
+    //  SOUND SYNTHESIZER ENGINE (Web Audio API)
+    // ─────────────────────────────────────────────────────────────────────────
+    class SoundSynth {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.stretchOsc = null;
+        this.stretchGain = null;
+      }
+
+      init() {
+        if (this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        // Visual toggle
+        document.getElementById("svg-sound-on").style.display = this.muted ? "none" : "block";
+        document.getElementById("svg-sound-off").style.display = this.muted ? "block" : "none";
+        
+        if (this.muted) {
+          this.stopStretch();
+        }
+        return this.muted;
+      }
+
+      playStretch(pct) {
+        if (this.muted) return;
+        this.init();
+        if (this.ctx.state === "suspended") {
+          this.ctx.resume();
+        }
+
+        const freq = 120 + pct * 240; // 120Hz to 360Hz sweep
+        const vol = 0.05 + pct * 0.12;
+
+        if (!this.stretchOsc) {
+          this.stretchOsc = this.ctx.createOscillator();
+          this.stretchOsc.type = "triangle";
+          
+          this.stretchGain = this.ctx.createGain();
+          this.stretchOsc.connect(this.stretchGain);
+          this.stretchGain.connect(this.ctx.destination);
+          
+          this.stretchOsc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          this.stretchGain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          this.stretchOsc.start();
+        } else {
+          this.stretchOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+          this.stretchGain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.05);
+        }
+      }
+
+      stopStretch() {
+        if (this.stretchOsc) {
+          try {
+            const osc = this.stretchOsc;
+            const gain = this.stretchGain;
+            this.stretchOsc = null;
+            this.stretchGain = null;
+            gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+            setTimeout(() => {
+              osc.stop();
+              osc.disconnect();
+              gain.disconnect();
+            }, 100);
+          } catch (e) {
+            // Silently catch errors
+          }
+        }
+      }
+
+      playLaunch() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(480, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.18);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+
+      playBounce(isWall = true) {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "triangle";
+        const baseFreq = isWall ? 300 : 170;
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.09);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
+
+      playRim() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(950, now);
+        osc.frequency.setValueAtTime(750, now + 0.02);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+
+      playScore() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        // C5, E5, G5, C6 arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const t = now + idx * 0.08;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, t);
+
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(t);
+          osc.stop(t + 0.32);
+        });
+      }
+
+      playWin() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        // Retro win fanfare
+        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51];
+        notes.forEach((freq, idx) => {
+          const t = now + idx * 0.07;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(freq, t);
+
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(2000, t);
+
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.12, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(t);
+          osc.stop(t + 0.28);
+        });
+      }
+
+      playClick() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+
+      // Paper crinkle swap sound
+      playDiscard() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.12;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(320, now + 0.11);
+        
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        noise.start(now);
+      }
+
+      // Detuned dual oscillator alarm buzzer
+      playBuzzer() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc1.type = "sawtooth";
+        osc1.frequency.setValueAtTime(110, now);
+        
+        osc2.type = "sawtooth";
+        osc2.frequency.setValueAtTime(114, now);
+        
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.linearRampToValueAtTime(0.35, now + 0.35);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc1.start(now);
+        osc2.start(now);
+        
+        osc1.stop(now + 0.5);
+        osc2.stop(now + 0.5);
+      }
+
+      // Squeaky squeegee wipe sound
+      playWipe() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.linearRampToValueAtTime(900, now + 0.08);
+        osc.frequency.linearRampToValueAtTime(500, now + 0.2);
+        
+        oscGain.gain.setValueAtTime(0, now);
+        oscGain.gain.linearRampToValueAtTime(0.15, now + 0.04);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+        
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+    }
+
+    const sfx = new SoundSynth();
+
+    // Initialize Web Audio Context on general user interaction
+    window.addEventListener("click", () => sfx.init());
+    window.addEventListener("touchstart", () => sfx.init());
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  LEVEL CONFIGURATIONS
+    // ─────────────────────────────────────────────────────────────────────────
+    const LEVELS = [
+      {
+        level: 1,
+        name: "Standard Play",
+        word: "COLSON",
+        movingHoops: false,
+        hasObstacle: false,
+        wind: false,
+        hoopSpeed: 0,
+        desc: "Aim, pull, shoot. Simple unmoving targets.",
+      },
+      {
+        level: 2,
+        name: "Wacky Hoops",
+        word: "WACKY",
+        movingHoops: true,
+        hasObstacle: false,
+        wind: false,
+        hoopSpeed: 80,
+        desc: "Stay focused! The hoops float left and right.",
+      },
+      {
+        level: 3,
+        name: "Bounce Shield",
+        word: "KABOOM",
+        movingHoops: true,
+        hasObstacle: true,
+        wind: false,
+        hoopSpeed: 100,
+        desc: "A rotating shield bounces balls in the center!",
+      },
+      {
+        level: 4,
+        name: "Wind Storm",
+        word: "SPELLED",
+        movingHoops: true,
+        hasObstacle: true,
+        wind: true,
+        hoopSpeed: 110,
+        desc: "Sidelining gusts change directions every shot!",
+      }
+    ];
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PROJECTILE CONFIGURATIONS (Specific items & unique physics)
+    // ─────────────────────────────────────────────────────────────────────────
+    const PROJECTILES = {
+      good: [
+        { type: "watermelon", name: "Watermelon", isGood: true, mass: 1.0, bounce: 0.72 },
+        { type: "chicken", name: "Rubber Chicken", isGood: true, mass: 0.85, bounce: 0.5 },
+        { type: "gum", name: "Bubble Gum", isGood: true, mass: 0.6, bounce: 0.96 },
+        { type: "beachball", name: "Beach Ball", isGood: true, mass: 0.38, bounce: 0.8 }
+      ],
+      hazard: [
+        { type: "bowling", name: "Bowling Ball", isGood: false, mass: 2.3, bounce: 0.35 },
+        { type: "anvil", name: "Anvil", isGood: false, mass: 3.5, bounce: 0.15 }
+      ]
+    };
+
+    let currentLevelIndex = 0;
+    let totalGameScore = 0;
+    let totalShotsFired = 0;
+    let levelShotsFired = 0;
+    let totalBasketsScored = 0;
+    let levelBasketsScored = 0;
+    let strikes = 0;
+
+    // Load highscore
+    let highScore = parseInt(localStorage.getItem("wacky_highscore") || "0");
+    document.getElementById("start-highscore-badge").innerText = `High Score: ${highScore}`;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  KABOOM GAME SETUP
+    // ─────────────────────────────────────────────────────────────────────────
+    const canvas = document.getElementById("game-canvas");
+    kaboom({
+      canvas: canvas,
+      width: 480,
+      height: 720,
+      background: [8, 8, 22],
+    });
+
+    // Color Palette
+    const PAL = {
+      batter:   [255, 210, 60],
+      ball:     [255, 80,  80],
+      hoop:     [60,  210, 255],
+      hoopRim:  [20,  140, 200],
+      aimLine:  [255, 255, 255, 0.45],
+      sling:    [180, 130, 60],
+      star:     [255, 220, 50],
+    };
+
+    // Constants
+    const W = 480, H = 720;
+    const BATTER_Y      = H - 90;
+    const BATTER_X      = W / 2;
+    const HOOP_Y        = 96;
+    const DRAG_MAX      = 140;          // Max pull distance
+    const LAUNCH_SCALE  = 14;           // Launch velocity multiplier
+    const GRAVITY       = 600;
+    const BALL_R        = 13;
+    const HOOP_W        = 52;
+    const HOOP_H        = 36;
+    const BATTER_W      = 54;
+    const BATTER_H      = 50;
+
+    // Global references
+    let dragging     = false;
+    let dragStart    = null;
+    let dragCurrent  = null;
+    let ball         = null;
+    let inFlight     = false;
+    let hoops        = [];
+    let netObjects   = [];
+    let letterBubbles = [];
+    let obstacleObj  = null;
+    let curWindVal   = 0;
+    let isMenuPaused = false;
+    let currentLetterIndex = 0;
+    let currentProjectileType = null;
+
+    // Keyboard controls state
+    let kbAimAngle = -90; // degrees
+    let kbPullLength = 0;
+    let usingKeyboardAim = false;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  PROJECTILE RENDERERS
+    // ─────────────────────────────────────────────────────────────────────────
+    function drawWatermelon(pos, radius, alpha = 1.0) {
+      // Green skin
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(40, 160, 40),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Dark green stripes
+      for (let offset = -radius + 4; offset < radius; offset += 5) {
+        if (offset === 0) continue;
+        const c1 = pos.add(vec2(offset * 0.6, -radius * 0.8));
+        const c2 = pos.add(vec2(offset * 0.95, 0));
+        const c3 = pos.add(vec2(offset * 0.6, radius * 0.8));
+        drawLine({ p1: c1, p2: c2, width: 2, color: rgb(15, 80, 15), opacity: alpha });
+        drawLine({ p1: c2, p2: c3, width: 2, color: rgb(15, 80, 15), opacity: alpha });
+      }
+    }
+
+    function drawChicken(pos, radius, alpha = 1.0) {
+      // Yellow body shape
+      drawRect({
+        pos: pos.add(vec2(0, 3)),
+        width: radius * 1.3,
+        height: radius * 2.1,
+        radius: 6,
+        anchor: "center",
+        color: rgb(255, 225, 40),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Red comb
+      drawCircle({
+        pos: pos.add(vec2(0, -radius * 0.9)),
+        radius: radius * 0.38,
+        color: rgb(240, 40, 40),
+        opacity: alpha
+      });
+      // Beak
+      drawRect({
+        pos: pos.add(vec2(radius * 0.45, -radius * 0.4)),
+        width: radius * 0.5,
+        height: radius * 0.3,
+        anchor: "center",
+        color: rgb(255, 140, 0),
+        opacity: alpha
+      });
+      // Eye dot
+      drawCircle({
+        pos: pos.add(vec2(radius * 0.1, -radius * 0.55)),
+        radius: 1.5,
+        color: rgb(0, 0, 0),
+        opacity: alpha
+      });
+    }
+
+    function drawGum(pos, radius, alpha = 1.0) {
+      // Pink circle
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(255, 110, 180),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Specular glow
+      drawCircle({
+        pos: pos.add(vec2(-radius * 0.3, -radius * 0.3)),
+        radius: radius * 0.22,
+        color: rgb(255, 255, 255),
+        opacity: alpha * 0.75
+      });
+    }
+
+    function drawBeachBall(pos, radius, alpha = 1.0) {
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(245, 245, 245),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Colorful segments using lines
+      drawLine({ p1: pos.add(vec2(0, -radius)), p2: pos.add(vec2(0, radius)), width: 3.5, color: rgb(255, 70, 70), opacity: alpha });
+      drawLine({ p1: pos.add(vec2(-radius, 0)), p2: pos.add(vec2(radius, 0)), width: 3.5, color: rgb(60, 200, 255), opacity: alpha });
+      drawLine({ p1: pos.add(vec2(-radius * 0.7, -radius * 0.7)), p2: pos.add(vec2(radius * 0.7, radius * 0.7)), width: 3.5, color: rgb(255, 215, 0), opacity: alpha });
+    }
+
+    function drawBowling(pos, radius, alpha = 1.0) {
+      // Gray heavy circle
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(60, 62, 72),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // 3 Finger holes
+      drawCircle({ pos: pos.add(vec2(-3.5, -3.5)), radius: 2.2, color: rgb(15, 15, 20), opacity: alpha });
+      drawCircle({ pos: pos.add(vec2(3.5, -3.5)), radius: 2.2, color: rgb(15, 15, 20), opacity: alpha });
+      drawCircle({ pos: pos.add(vec2(0, 3.5)), radius: 2.2, color: rgb(15, 15, 20), opacity: alpha });
+    }
+
+    function drawAnvil(pos, radius, alpha = 1.0) {
+      // Steel deck
+      drawRect({
+        pos: pos.add(vec2(0, -3)),
+        width: radius * 1.9,
+        height: radius * 0.65,
+        anchor: "center",
+        color: rgb(90, 95, 110),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Slanted heavy stem
+      drawRect({
+        pos: pos.add(vec2(-radius * 0.45, 5)),
+        width: radius * 0.9,
+        height: radius * 1.0,
+        anchor: "center",
+        color: rgb(75, 80, 95),
+        opacity: alpha,
+        outline: { color: rgb(15, 15, 25), width: 1.5 }
+      });
+      // Pointy horn deck
+      drawRect({
+        pos: pos.add(vec2(radius * 0.5, -3)),
+        width: radius * 0.8,
+        height: radius * 0.45,
+        anchor: "center",
+        color: rgb(90, 95, 110),
+        opacity: alpha
+      });
+    }
+
+    function drawProjectile(type, pos, radius, alpha = 1.0) {
+      if (type === "watermelon") drawWatermelon(pos, radius, alpha);
+      else if (type === "chicken") drawChicken(pos, radius, alpha);
+      else if (type === "gum") drawGum(pos, radius, alpha);
+      else if (type === "beachball") drawBeachBall(pos, radius, alpha);
+      else if (type === "bowling") drawBowling(pos, radius, alpha);
+      else if (type === "anvil") drawAnvil(pos, radius, alpha);
+    }
+
+    // Load random good or hazard projectile
+    function loadRandomProjectile() {
+      // 74% Good projectile chance, 26% Hazard chance
+      const isGood = rand(0, 1) < 0.74;
+      if (isGood) {
+        const list = PROJECTILES.good;
+        currentProjectileType = list[Math.floor(rand(0, list.length))];
+      } else {
+        const list = PROJECTILES.hazard;
+        currentProjectileType = list[Math.floor(rand(0, list.length))];
+      }
+
+      // Add alert CSS to swap button if hazard loaded
+      const btnDiscard = document.getElementById("btn-discard");
+      if (btnDiscard) {
+        if (currentProjectileType.isGood) {
+          btnDiscard.classList.remove("pulse-alert");
+        } else {
+          btnDiscard.classList.add("pulse-alert");
+        }
+      }
+    }
+
+    // Setup Kaboom Game Logic in single dynamic scene "game"
+    scene("game", () => {
+      
+      const config = LEVELS[currentLevelIndex];
+      
+      // Update HUD and show strikes
+      document.getElementById("lvl-num-text").innerText = config.level;
+      document.getElementById("lvl-name-text").innerText = config.name;
+      document.getElementById("strike-hud").classList.remove("hidden");
+      document.getElementById("btn-discard").classList.remove("hidden");
+
+      // Resets
+      dragging = false;
+      dragStart = null;
+      dragCurrent = null;
+      ball = null;
+      inFlight = false;
+      hoops = [];
+      netObjects = [];
+      letterBubbles = [];
+      obstacleObj = null;
+      currentLetterIndex = 0;
+      levelShotsFired = 0;
+      levelBasketsScored = 0;
+      strikes = 0;
+
+      // Reset penalty overlay UI
+      document.getElementById("penalty-overlay").classList.add("hidden");
+      document.getElementById("water-splash").classList.add("hidden");
+      document.getElementById("bucket-shadow-container").className = "";
+      wipeCount = 0;
+
+      kbPullLength = 0;
+      kbAimAngle = -90;
+      usingKeyboardAim = false;
+
+      updateStrikesHUD();
+      loadRandomProjectile();
+
+      // Set wind vector for Level 4
+      if (config.wind) {
+        curWindVal = rand(-150, 150);
+      } else {
+        curWindVal = 0;
+      }
+
+      // Clean persistent watermelon splats from screen (if any from previous runs)
+      // They are tagged with "splat", so Kaboom automatically destroys them on scene reload.
+
+      // Add Space Background Stars (High fidelity parallax design)
+      for (let i = 0; i < 50; i++) {
+        add([
+          pos(rand(0, W), rand(0, H * 0.75)),
+          circle(rand(0.5, 2.5)),
+          color(...PAL.star),
+          opacity(rand(0.15, 0.65)),
+          z(0)
+        ]);
+      }
+
+      // Ground
+      add([
+        rect(W, 16),
+        pos(0, H - 20),
+        color(32, 32, 60),
+        area(),
+        "ground",
+        z(1)
+      ]);
+
+      // Draw Letter Bubbles for spelling
+      const wordArr = config.word.split("");
+      const LETTER_SPACING = 36;
+      const startX = W / 2 - ((wordArr.length - 1) * LETTER_SPACING) / 2;
+      const bubbleY = 64;
+
+      for (let i = 0; i < wordArr.length; i++) {
+        const lx = startX + i * LETTER_SPACING;
+        
+        // Shadow/glow ring
+        const outlineCircle = add([
+          circle(15),
+          pos(lx, bubbleY),
+          color(40, 40, 75),
+          opacity(0.4),
+          z(1)
+        ]);
+
+        // Background bubble
+        const bg = add([
+          circle(14),
+          pos(lx, bubbleY),
+          color(20, 20, 36),
+          opacity(0.9),
+          scale(1),
+          z(2)
+        ]);
+
+        // The text letter itself
+        const txt = add([
+          text(wordArr[i], { size: 14, font: "monospace" }),
+          pos(lx, bubbleY),
+          anchor("center"),
+          color(100, 100, 120),
+          scale(1),
+          z(3)
+        ]);
+
+        letterBubbles.push({ bg, txt, outlineCircle, letter: wordArr[i] });
+      }
+
+      // Spawn Hoops & Nets
+      const HOOP_COLS = 4;
+      const HOOP_SPACING = W / (HOOP_COLS + 1);
+      
+      for (let i = 0; i < HOOP_COLS; i++) {
+        const hx = HOOP_SPACING * (i + 1);
+        const hy = HOOP_Y;
+
+        // Dynamic flexible net child object
+        const net = add([
+          pos(hx, hy),
+          z(3),
+          {
+            flexY: 0,
+            flexSpeed: 0,
+            draw() {
+              const topY = 0;
+              const bottomY = HOOP_H / 2 + 10;
+              const leftX = -HOOP_W / 2 + 4;
+              const rightX = HOOP_W / 2 - 4;
+              const midX = 0;
+
+              const fOffset = this.flexY;
+              
+              const pLeftTop   = vec2(leftX, topY);
+              const pRightTop  = vec2(rightX, topY);
+              const pLeftMid   = vec2(leftX + 4 + fOffset * 0.25, topY + 12);
+              const pRightMid  = vec2(rightX - 4 - fOffset * 0.25, topY + 12);
+              const pBottomLeft  = vec2(midX - 7, bottomY + fOffset);
+              const pBottomRight = vec2(midX + 7, bottomY + fOffset);
+
+              // Grid lines
+              drawLine({ p1: pLeftTop, p2: pLeftMid, width: 1.5, color: rgb(255, 255, 255), opacity: 0.4 });
+              drawLine({ p1: pLeftMid, p2: pBottomLeft, width: 1.5, color: rgb(255, 255, 255), opacity: 0.4 });
+              drawLine({ p1: pRightTop, p2: pRightMid, width: 1.5, color: rgb(255, 255, 255), opacity: 0.4 });
+              drawLine({ p1: pRightMid, p2: pBottomRight, width: 1.5, color: rgb(255, 255, 255), opacity: 0.4 });
+              drawLine({ p1: vec2(midX, topY), p2: vec2(midX, bottomY + fOffset), width: 1.5, color: rgb(255, 255, 255), opacity: 0.25 });
+
+              // Cross diagonals
+              drawLine({ p1: pLeftTop, p2: pRightMid, width: 1, color: rgb(255, 255, 255), opacity: 0.3 });
+              drawLine({ p1: pRightTop, p2: pLeftMid, width: 1, color: rgb(255, 255, 255), opacity: 0.3 });
+              drawLine({ p1: pLeftMid, p2: pBottomRight, width: 1, color: rgb(255, 255, 255), opacity: 0.3 });
+              drawLine({ p1: pRightMid, p2: pBottomLeft, width: 1, color: rgb(255, 255, 255), opacity: 0.3 });
+            },
+            update() {
+              // Damped harmonic vibration
+              const k = 180; 
+              const c = 9;   
+              const force = -k * this.flexY;
+              this.flexSpeed += force * dt();
+              this.flexSpeed *= Math.exp(-c * dt());
+              this.flexY += this.flexSpeed * dt();
+            }
+          }
+        ]);
+
+        // Main hoop backboard collider
+        const hoop = add([
+          rect(HOOP_W, HOOP_H, { radius: 2 }),
+          pos(hx, hy),
+          anchor("center"),
+          color(...PAL.hoop),
+          opacity(0.24),
+          area({ shape: new Rect(vec2(0), HOOP_W, HOOP_H) }),
+          "hoop",
+          z(4),
+          {
+            id: i,
+            initialX: hx,
+            initialY: hy,
+            initialIndex: i,
+            dir: i % 2 === 0 ? 1 : -1,
+            scored: false,
+            netRef: net,
+            draw() {
+              // Rims
+              const topY = -HOOP_H / 2;
+              const bottomY = HOOP_H / 2 - 5;
+              const leftX = -HOOP_W / 2;
+              
+              drawRect({
+                width: HOOP_W,
+                height: 5,
+                pos: vec2(leftX, topY),
+                color: rgb(...PAL.hoopRim),
+              });
+              
+              drawRect({
+                width: HOOP_W,
+                height: 5,
+                pos: vec2(leftX, bottomY),
+                color: rgb(...PAL.hoopRim),
+              });
+              
+              // Basket symbol
+              drawText({
+                text: "O",
+                size: 18,
+                font: "monospace",
+                pos: vec2(-6, -10),
+                color: rgb(...PAL.hoopRim),
+              });
+            }
+          }
+        ]);
+
+        hoop.onUpdate(() => {
+          if (config.movingHoops && !isMenuPaused) {
+            hoop.pos.x += hoop.dir * config.hoopSpeed * dt();
+            
+            // Limit bounds in column segments
+            const leftBound = hoop.initialX - HOOP_SPACING / 2 + 10;
+            const rightBound = hoop.initialX + HOOP_SPACING / 2 - 10;
+            
+            if (hoop.pos.x < leftBound) {
+              hoop.pos.x = leftBound;
+              hoop.dir = 1;
+            }
+            if (hoop.pos.x > rightBound) {
+              hoop.pos.x = rightBound;
+              hoop.dir = -1;
+            }
+            // Bind net position
+            net.pos.x = hoop.pos.x;
+          }
+        });
+
+        hoops.push(hoop);
+        netObjects.push(net);
+      }
+
+      // Floating rotating bouncy obstacle (Level 3+)
+      if (config.hasObstacle) {
+        obstacleObj = add([
+          rect(100, 16, { radius: 4 }),
+          pos(W / 2, H / 2 - 20),
+          anchor("center"),
+          color(180, 50, 255), // Glowing neon magenta
+          outline(2, rgb(255, 255, 255)),
+          area(),
+          rotate(0),
+          "obstacle",
+          z(4),
+          {
+            angleSpeed: 60, // degrees per sec
+            update() {
+              if (!isMenuPaused) {
+                this.angle += this.angleSpeed * dt();
+              }
+            }
+          }
+        ]);
+      }
+
+      // Slingshot Base Poles
+      const POLE_H = 38;
+      add([rect(5, POLE_H), pos(BATTER_X - 28, BATTER_Y - POLE_H + 12), color(...PAL.sling), z(2)]);
+      add([rect(5, POLE_H), pos(BATTER_X + 23, BATTER_Y - POLE_H + 12), color(...PAL.sling), z(2)]);
+
+      // Animated custom batter character
+      const batter = add([
+        pos(BATTER_X, BATTER_Y),
+        anchor("center"),
+        area({ shape: new Rect(vec2(0), BATTER_W, BATTER_H) }),
+        scale(1, 1),
+        "batter",
+        z(5),
+        {
+          blinkTimer: 2.5,
+          sadTimer: 0,
+          happyTimer: 0,
+          gaspTimer: 0,
+          lookDir: vec2(0),
+          draw() {
+            // Body shape
+            drawRect({
+              width: BATTER_W,
+              height: BATTER_H,
+              radius: 12,
+              anchor: "center",
+              color: rgb(...PAL.batter),
+              outline: { color: rgb(20, 20, 30), width: 3 },
+            });
+
+            // Eyes position offset relative to center
+            const eyeOffsetLeft = vec2(-12, -8).add(this.lookDir);
+            const eyeOffsetRight = vec2(12, -8).add(this.lookDir);
+
+            if (this.sadTimer > 0) {
+              // Dizzy cross eyes
+              drawLine({ p1: eyeOffsetLeft.sub(vec2(4, 4)), p2: eyeOffsetLeft.add(vec2(4, 4)), width: 2.5, color: rgb(20, 20, 20) });
+              drawLine({ p1: eyeOffsetLeft.add(vec2(-4, 4)), p2: eyeOffsetLeft.add(vec2(4, -4)), width: 2.5, color: rgb(20, 20, 20) });
+              
+              drawLine({ p1: eyeOffsetRight.sub(vec2(4, 4)), p2: eyeOffsetRight.add(vec2(4, 4)), width: 2.5, color: rgb(20, 20, 20) });
+              drawLine({ p1: eyeOffsetRight.add(vec2(-4, 4)), p2: eyeOffsetRight.add(vec2(4, -4)), width: 2.5, color: rgb(20, 20, 20) });
+              
+              // Sad "o" mouth
+              drawCircle({ pos: vec2(0, 10), radius: 4, color: rgb(20, 20, 20) });
+            } else {
+              const isBlinking = this.blinkTimer < 0.15;
+              if (isBlinking) {
+                // Closed eye lines
+                drawLine({ p1: eyeOffsetLeft.sub(vec2(6, 0)), p2: eyeOffsetLeft.add(vec2(6, 0)), width: 3, color: rgb(20, 20, 20) });
+                drawLine({ p1: eyeOffsetRight.sub(vec2(6, 0)), p2: eyeOffsetRight.add(vec2(6, 0)), width: 3, color: rgb(20, 20, 20) });
+              } else {
+                // Eyeballs
+                drawCircle({ pos: eyeOffsetLeft, radius: 6.5, color: rgb(255, 255, 255) });
+                drawCircle({ pos: eyeOffsetRight, radius: 6.5, color: rgb(255, 255, 255) });
+                
+                // Pupils look vector
+                const pupilP = this.lookDir.scale(0.6);
+                drawCircle({ pos: eyeOffsetLeft.add(pupilP), radius: 3, color: rgb(0, 0, 0) });
+                drawCircle({ pos: eyeOffsetRight.add(pupilP), radius: 3, color: rgb(0, 0, 0) });
+              }
+
+              // Mouth expressions
+              if (this.happyTimer > 0) {
+                // Giant open smile
+                drawCircle({ pos: vec2(0, 8), radius: 7, color: rgb(20, 20, 20) });
+              } else if (this.gaspTimer > 0) {
+                // Shocked circle mouth
+                drawCircle({ pos: vec2(0, 8), radius: 5, color: rgb(20, 20, 20) });
+              } else {
+                // Default smile "~"
+                drawText({
+                  text: "~",
+                  pos: vec2(0, 4),
+                  size: 16,
+                  font: "monospace",
+                  anchor: "center",
+                  color: rgb(20, 20, 20),
+                });
+              }
+            }
+          },
+          update() {
+            if (isMenuPaused) return;
+
+            // Blinks
+            this.blinkTimer -= dt();
+            if (this.blinkTimer <= 0) {
+              this.blinkTimer = rand(2, 5.5);
+            }
+
+            // Timers decay
+            if (this.sadTimer > 0) this.sadTimer -= dt();
+            if (this.happyTimer > 0) this.happyTimer -= dt();
+            if (this.gaspTimer > 0) this.gaspTimer -= dt();
+
+            // Look direction calculation
+            if (dragging && dragCurrent) {
+              const d = dragStart.sub(dragCurrent).unit().scale(3.5);
+              this.lookDir = this.lookDir.lerp(d, dt() * 12);
+            } else if (ball && inFlight) {
+              const d = ball.pos.sub(this.pos).unit().scale(3.5);
+              this.lookDir = this.lookDir.lerp(d, dt() * 12);
+            } else {
+              this.lookDir = this.lookDir.lerp(vec2(0), dt() * 6);
+            }
+
+            // Squash & stretch physics recovery
+            this.scale = this.scale.lerp(vec2(1, 1), dt() * 10);
+          }
+        }
+      ]);
+
+      // Slingshot elastic band rendering and trajectory dots
+      add([
+        pos(0, 0),
+        z(4),
+        {
+          draw() {
+            if (dragging && dragCurrent && !isMenuPaused) {
+              const pull = clampPull(dragCurrent);
+              
+              // Left elastic band
+              drawLine({
+                p1: vec2(BATTER_X - 25, BATTER_Y - 20),
+                p2: pull,
+                width: 3.5,
+                color: rgb(...PAL.sling),
+              });
+              // Right elastic band
+              drawLine({
+                p1: vec2(BATTER_X + 23, BATTER_Y - 20),
+                p2: pull,
+                width: 3.5,
+                color: rgb(...PAL.sling),
+              });
+
+              // DRAW SPECIFIC PROJECTILE AT PULL CUP
+              if (currentProjectileType) {
+                drawProjectile(currentProjectileType.type, pull, BALL_R, 1.0);
+              }
+
+              // Draw aiming path dots
+              const vx = (dragStart.x - pull.x) * LAUNCH_SCALE;
+              const vy = (dragStart.y - pull.y) * LAUNCH_SCALE;
+              
+              // heavy objects drop faster in aim trajectory
+              const pMass = currentProjectileType ? currentProjectileType.mass : 1.0;
+
+              for (let t = 0.05; t < 0.85; t += 0.065) {
+                let px = dragStart.x + vx * t;
+                let py = dragStart.y + vy * t + 0.5 * (GRAVITY * pMass) * t * t;
+                
+                // Add estimated wind force curve to aim path!
+                if (config.wind) {
+                  px += 0.5 * curWindVal * t * t;
+                }
+
+                const alpha = 1 - t / 0.85;
+                drawCircle({
+                  pos: vec2(px, py),
+                  radius: 3.5,
+                  color: rgb(255, 255, 255),
+                  opacity: alpha * 0.7,
+                });
+              }
+            } else if (!inFlight && currentProjectileType && !isMenuPaused) {
+              // Draw loaded projectile resting in the slingshot cup
+              const idlePos = vec2(BATTER_X, BATTER_Y - 20);
+              drawProjectile(currentProjectileType.type, idlePos, BALL_R, 1.0);
+            }
+          }
+        }
+      ]);
+
+      // WIND INDICATOR HUD (Lvl 4 only)
+      if (config.wind) {
+        add([
+          pos(W - 75, 130),
+          z(5),
+          {
+            draw() {
+              // Box backdrop
+              drawRect({
+                width: 64,
+                height: 32,
+                radius: 6,
+                color: rgb(12, 12, 32),
+                opacity: 0.5,
+                outline: { color: rgb(255, 255, 255), width: 1, opacity: 0.1 }
+              });
+
+              // Arrow pointing direction of wind
+              const arrowOffset = curWindVal > 0 ? 15 : -15;
+              drawLine({
+                p1: vec2(32 - arrowOffset * 0.6, 16),
+                p2: vec2(32 + arrowOffset * 0.6, 16),
+                width: 2.5,
+                color: rgb(60, 210, 255)
+              });
+              // Arrow tip
+              const tipX = 32 + arrowOffset * 0.6;
+              const dirSign = Math.sign(curWindVal);
+              drawLine({ p1: vec2(tipX, 16), p2: vec2(tipX - 5 * dirSign, 12), width: 2, color: rgb(60, 210, 255) });
+              drawLine({ p1: vec2(tipX, 16), p2: vec2(tipX - 5 * dirSign, 20), width: 2, color: rgb(60, 210, 255) });
+
+              // Wind strength text
+              drawText({
+                text: `${Math.abs(Math.round(curWindVal))} W`,
+                size: 8,
+                pos: vec2(32, 25),
+                anchor: "center",
+                color: rgb(255, 255, 255),
+                opacity: 0.8
+              });
+            }
+          }
+        ]);
+      }
+
+      // Wind Drift particle lines generator (Lvl 4 only)
+      onUpdate(() => {
+        if (config.wind && !isMenuPaused && rand(0, 1) < dt() * 3) {
+          const windDir = Math.sign(curWindVal);
+          const startX = windDir > 0 ? -40 : W + 40;
+          add([
+            rect(rand(35, 75), 1.5, { radius: 1 }),
+            pos(startX, rand(70, H - 180)),
+            color(255, 255, 255),
+            opacity(rand(0.08, 0.18)),
+            lifespan(2.8),
+            z(1),
+            "windLine",
+            {
+              update() {
+                if (!isMenuPaused) {
+                  this.pos.x += (curWindVal * 1.6 + windDir * 80) * dt();
+                }
+              }
+            }
+          ]);
+        }
+      });
+
+      // ───────────────────────────────────────────────────────────────────────
+      //  SPAWN BALL HELPER
+      // ───────────────────────────────────────────────────────────────────────
+      function spawnBall(startPos, vx, vy) {
+        if (ball) destroy(ball);
+        inFlight = true;
+        
+        // Squash character to show launch feedback
+        batter.scale = vec2(0.7, 1.4);
+        batter.gaspTimer = 0.6; // gasp face
+
+        const proj = currentProjectileType;
+
+        ball = add([
+          circle(BALL_R),
+          pos(startPos),
+          color(255, 255, 255),
+          area(),
+          z(4),
+          {
+            vx, 
+            vy,
+            type: proj.type,
+            isGood: proj.isGood,
+            mass: proj.mass,
+            bounce: proj.bounce,
+            lastTrailTime: 0,
+            draw() {
+              // Custom vector drawings
+              drawProjectile(this.type, vec2(0, 0), BALL_R, 1.0);
+            },
+            update() {
+              if (isMenuPaused) return;
+
+              // Apply wind
+              if (config.wind) {
+                this.vx += curWindVal * dt();
+              }
+
+              // Air resistance
+              this.vx *= 1 - 0.012 * dt() * 60;
+              // Gravity adjusted by projectile mass
+              this.vy += (GRAVITY * this.mass) * dt();
+
+              this.pos.x += this.vx * dt();
+              this.pos.y += this.vy * dt();
+
+              // Spawns glowing trailing particle effects matching the item color
+              if (time() - this.lastTrailTime > 0.035) {
+                this.lastTrailTime = time();
+                
+                let trailColor = PAL.ball;
+                if (this.type === "watermelon") trailColor = [74, 180, 74];
+                else if (this.type === "chicken") trailColor = [255, 220, 50];
+                else if (this.type === "gum") trailColor = [255, 120, 180];
+                else if (this.type === "beachball") trailColor = [200, 200, 250];
+                else if (this.type === "bowling") trailColor = [80, 80, 90];
+                else if (this.type === "anvil") trailColor = [110, 115, 130];
+
+                add([
+                  circle(BALL_R - 3),
+                  pos(this.pos),
+                  color(...trailColor),
+                  opacity(0.35),
+                  lifespan(0.25),
+                  anchor("center"),
+                  z(3),
+                  {
+                    update() {
+                      this.opacity = Math.max(0, this.opacity - dt() * 1.5);
+                    }
+                  }
+                ]);
+              }
+
+              // Wall boundaries collision & bounce
+              if (this.pos.x - BALL_R < 0) {
+                this.pos.x = BALL_R;
+                this.vx *= -this.bounce;
+                sfx.playBounce(true);
+              }
+              if (this.pos.x + BALL_R > W) {
+                this.pos.x = W - BALL_R;
+                this.vx *= -this.bounce;
+                sfx.playBounce(true);
+              }
+
+              // Ceiling boundary bounce
+              if (this.pos.y - BALL_R < 0) {
+                this.pos.y = BALL_R;
+                this.vy *= -this.bounce;
+                sfx.playBounce(true);
+              }
+
+              // Drop past bottom boundary
+              if (this.pos.y > H + 40) {
+                inFlight = false;
+                destroy(this);
+                ball = null;
+                
+                // Batter face reacts to missing
+                batter.sadTimer = 1.2;
+
+                // Load new item for next shot
+                loadRandomProjectile();
+              }
+
+              // Run overlapping hoop scoring checks
+              checkHoops();
+            }
+          },
+          "ball"
+        ]);
+      }
+
+      // Check hoops collision
+      function checkHoops() {
+        if (!ball || !inFlight || isMenuPaused) return;
+
+        // Hazards cannot score and will instead bounce off hoops physically!
+        if (!ball.isGood) {
+          for (const h of hoops) {
+            const dx = ball.pos.x - h.pos.x;
+            const dy = ball.pos.y - h.pos.y;
+            
+            // Overlaps with hoop boundary box
+            if (Math.abs(dx) < HOOP_W / 2 + BALL_R && Math.abs(dy) < HOOP_H / 2 + BALL_R) {
+              sfx.playRim();
+              // Physics bounce away reflection
+              const normal = ball.pos.sub(h.pos).unit();
+              const velocity = vec2(ball.vx, ball.vy);
+              const dotVal = velocity.dot(normal);
+              
+              if (dotVal < 0) {
+                const bounceReflect = velocity.sub(normal.scale(2 * dotVal)).scale(ball.bounce);
+                ball.vx = bounceReflect.x;
+                ball.vy = bounceReflect.y;
+                ball.pos = h.pos.add(normal.scale(BALL_R + HOOP_W/2 + 2));
+              }
+            }
+          }
+          return;
+        }
+
+        // Good items check scoring
+        for (const h of hoops) {
+          if (h.scored) continue;
+          
+          const dx = ball.pos.x - h.pos.x;
+          const dy = ball.pos.y - h.pos.y;
+          
+          // Ball center is falling through the hoop trigger boundary
+          if (Math.abs(dx) < HOOP_W / 2 - 2 && Math.abs(dy) < HOOP_H / 2 + 3) {
+            h.scored = true;
+            
+            // Flex the basket net downwards dynamically
+            h.netRef.flexY = 24;
+            h.netRef.flexSpeed = 160;
+
+            // Celebrating flash on hoop
+            h.opacity = 0.9;
+            wait(0.2, () => h.opacity = 0.24);
+
+            // Increment score variables
+            totalGameScore += 25; 
+            levelBasketsScored++;
+            totalBasketsScored++;
+
+            sfx.playScore();
+            spawnSparks(h.pos.x, h.pos.y);
+
+            // SPECIAL WATERMELON SPLAT GRAPHIC
+            if (ball.type === "watermelon") {
+              spawnWatermelonSplat(h.pos.x, h.pos.y);
+            }
+
+            // Light next spelling letter
+            lightUpNextLetter();
+          }
+        }
+      }
+
+      // Spark/Stars particle explosion when scoring
+      function spawnSparks(cx, cy) {
+        for (let i = 0; i < 15; i++) {
+          const a = rand(0, Math.PI * 2);
+          const spd = rand(80, 240);
+          const pvx = Math.cos(a) * spd;
+          const pvy = Math.sin(a) * spd;
+          
+          add([
+            circle(rand(2, 6)),
+            pos(cx, cy),
+            color(rand(80, 255), rand(180, 255), rand(180, 255)),
+            opacity(1),
+            z(8),
+            {
+              pvx, pvy, life: 0,
+              update() {
+                if (isMenuPaused) return;
+                this.life += dt();
+                this.pos.x += this.pvx * dt();
+                this.pos.y += this.pvy * dt();
+                this.opacity = Math.max(0, 1 - this.life * 2.2);
+                if (this.life > 0.5) destroy(this);
+              }
+            }
+          ]);
+        }
+      }
+
+      // Leave green juice splat on background when Watermelon scores
+      function spawnWatermelonSplat(cx, cy) {
+        const splatCount = 3 + Math.floor(rand(0, 3));
+        
+        for (let i = 0; i < splatCount; i++) {
+          const rx = cx + rand(-24, 24);
+          const ry = cy + rand(-15, 25);
+          const radius = rand(6, 16);
+          const opacityVal = rand(0.55, 0.85);
+
+          const splat = add([
+            pos(rx, ry),
+            z(1), // background graphic layer (stays below hoops, ball and foreground)
+            "splat",
+            {
+              opacity: opacityVal,
+              draw() {
+                // Main blob
+                drawCircle({
+                  pos: vec2(0, 0),
+                  radius: radius,
+                  color: rgb(74, 180, 74), // Juicy Green
+                  opacity: this.opacity,
+                });
+                // Small splash droplets around
+                const splash = 4;
+                for (let j = 0; j < splash; j++) {
+                  const angle = rand(0, 2 * Math.PI);
+                  const dist = rand(radius, radius * 1.85);
+                  drawCircle({
+                    pos: vec2(Math.cos(angle) * dist, Math.sin(angle) * dist),
+                    radius: rand(1.5, 3.5),
+                    color: rgb(74, 180, 74),
+                    opacity: this.opacity,
+                  });
+                }
+              }
+            }
+          ]);
+
+          // Drip and settle to half opacity background decoration
+          wait(rand(1.5, 3.2), () => {
+            splat.onUpdate(() => {
+              splat.opacity = Math.max(0.35, splat.opacity - dt() * 0.08);
+            });
+          });
+        }
+      }
+
+      // Obstacle collision handler (Bounces the ball away)
+      if (config.hasObstacle) {
+        onCollide("ball", "obstacle", (b, obs) => {
+          sfx.playRim();
+          
+          // Bounce off normal vector from shield center
+          const normal = b.pos.sub(obs.pos).unit();
+          const velocity = vec2(b.vx, b.vy);
+          const dotVal = velocity.dot(normal);
+
+          if (dotVal < 0) {
+            // Reflect: velocityReflected = v - 2 * (v.n) * n
+            const bounceReflect = velocity.sub(normal.scale(2 * dotVal)).scale(b.bounce);
+            b.vx = bounceReflect.x;
+            b.vy = bounceReflect.y;
+            
+            // Push ball slightly out of the collider boundary
+            b.pos = obs.pos.add(normal.scale(BALL_R + 14));
+          }
+        });
+      }
+
+      // spelling letter activation progress
+      function lightUpNextLetter() {
+        if (currentLetterIndex < wordArr.length) {
+          const bubble = letterBubbles[currentLetterIndex];
+          
+          // Update colors to gold glowing
+          bubble.bg.color = rgb(...PAL.star);
+          bubble.bg.opacity = 1.0;
+          bubble.txt.color = rgb(12, 12, 28);
+          bubble.outlineCircle.color = rgb(255, 255, 255);
+          bubble.outlineCircle.opacity = 0.8;
+          
+          // Pulse scale effect
+          bubble.bg.scale = vec2(1.6);
+          bubble.txt.scale = vec2(1.6);
+          
+          bubble.bg.onUpdate(() => {
+            bubble.bg.scale = bubble.bg.scale.lerp(vec2(1), dt() * 10);
+          });
+          bubble.txt.onUpdate(() => {
+            bubble.txt.scale = bubble.txt.scale.lerp(vec2(1), dt() * 10);
+          });
+
+          // Spark particles around bubble
+          spawnSparks(bubble.bg.pos.x, bubble.bg.pos.y);
+
+          // Batter happy face reaction
+          batter.happyTimer = 0.85;
+
+          currentLetterIndex++;
+
+          // Level Cleared Conditions
+          if (currentLetterIndex === wordArr.length) {
+            wait(0.5, triggerLevelWin);
+          }
+        }
+      }
+
+      function triggerLevelWin() {
+        isMenuPaused = true;
+        sfx.playWin();
+        document.getElementById("btn-discard").classList.add("hidden");
+        
+        // Disable ball
+        if (ball) {
+          destroy(ball);
+          ball = null;
+        }
+
+        // Multiple confetti blast sources
+        addConfetti({ pos: vec2(W / 2, H / 3) });
+        addConfetti({ pos: vec2(W / 4, H / 3) });
+        addConfetti({ pos: vec2(3 * W / 4, H / 3) });
+
+        wait(1.5, () => {
+          // Calculate highscores
+          if (totalGameScore > highScore) {
+            highScore = totalGameScore;
+            localStorage.setItem("wacky_highscore", highScore.toString());
+            document.getElementById("start-highscore-badge").innerText = `High Score: ${highScore}`;
+          }
+
+          // Trigger level up HTML Overlay
+          showLevelUpOverlay();
+        });
+      }
+
+      // Confetti particles generator
+      function addConfetti(opt = {}) {
+        for (let i = 0; i < 40; i++) {
+          const p = add([
+            pos(opt.pos ?? vec2(0, 0)),
+            rect(rand(6, 12), rand(6, 12), { radius: 2 }),
+            color(hsl2rgb(rand(0, 1), 0.8, 0.6)),
+            opacity(1),
+            lifespan(2.5),
+            rotate(rand(0, 360)),
+            anchor("center"),
+            z(20)
+          ]);
+
+          const gravity = 700;
+          const drag = 0.92;
+          const spread = 70;
+          const head = rand(-spread / 2, spread / 2) - 90;
+          const rad = (head * Math.PI) / 180;
+          const velocity = rand(300, 700);
+
+          let vx = Math.cos(rad) * velocity;
+          let vy = Math.sin(rad) * velocity;
+          const spin = rand(-150, 150);
+
+          p.onUpdate(() => {
+            vy += gravity * dt();
+            p.pos.x += vx * dt();
+            p.pos.y += vy * dt();
+            p.angle += spin * dt();
+            p.opacity -= 0.45 * dt();
+            vx *= drag;
+            vy *= drag;
+          });
+        }
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
+      //  MOUSE AND TOUCH EVENT INTERACTION
+      // ───────────────────────────────────────────────────────────────────────
+      function clampPull(cur) {
+        const dx = cur.x - dragStart.x;
+        const dy = cur.y - dragStart.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > DRAG_MAX) {
+          const ratio = DRAG_MAX / dist;
+          return vec2(dragStart.x + dx * ratio, dragStart.y + dy * ratio);
+        }
+        return vec2(cur.x, cur.y);
+      }
+
+      function isHoveringBatter(p) {
+        return (
+          p.x >= BATTER_X - BATTER_W / 2 - 15 &&
+          p.x <= BATTER_X + BATTER_W / 2 + 15 &&
+          p.y >= BATTER_Y - BATTER_H / 2 - 15 &&
+          p.y <= BATTER_Y + BATTER_H / 2 + 15
+        );
+      }
+
+      // Mouse Listeners
+      onMousePress("left", () => {
+        if (isMenuPaused || inFlight) return;
+        const p = mousePos();
+        if (isHoveringBatter(p)) {
+          // If a Hazard is loaded and the player just taps the batter center without drawing/dragging, 
+          // we can swap the item as a friendly click gesture!
+          // We will check drag and release distance to distinguish dragging from click swapping.
+          dragging = true;
+          usingKeyboardAim = false;
+          dragStart = vec2(BATTER_X, BATTER_Y - 20); // offset from slingshot top center
+          dragCurrent = vec2(p.x, p.y);
+          sfx.playClick();
+        }
+      });
+
+      onMouseMove(() => {
+        if (!dragging || isMenuPaused) return;
+        const p = mousePos();
+        dragCurrent = vec2(p.x, p.y);
+        
+        // Calculate pull percent to modulate sound pitch
+        const dist = dragStart.dist(dragCurrent);
+        const pct = Math.min(1.0, dist / DRAG_MAX);
+        sfx.playStretch(pct);
+
+        // Character vertical squashing animation
+        batter.scale = vec2(1 + pct * 0.25, 1 - pct * 0.35);
+      });
+
+      onMouseRelease("left", () => {
+        if (!dragging) return;
+        sfx.stopStretch();
+
+        // Check if this was just a tap/click on the batter to swap/discard item (release near start pos)
+        const dist = dragStart.dist(mousePos());
+        if (dist < 15) {
+          dragging = false;
+          dragCurrent = null;
+          discardCurrentItem();
+        } else {
+          fireShot();
+        }
+      });
+
+      // Touch screen listeners
+      onTouchStart((pos) => {
+        if (isMenuPaused || inFlight) return;
+        if (isHoveringBatter(pos)) {
+          dragging = true;
+          usingKeyboardAim = false;
+          dragStart = vec2(BATTER_X, BATTER_Y - 20);
+          dragCurrent = vec2(pos.x, pos.y);
+          sfx.playClick();
+        }
+      });
+
+      onTouchMove((pos) => {
+        if (!dragging || isMenuPaused) return;
+        dragCurrent = vec2(pos.x, pos.y);
+        
+        const dist = dragStart.dist(dragCurrent);
+        const pct = Math.min(1.0, dist / DRAG_MAX);
+        sfx.playStretch(pct);
+
+        batter.scale = vec2(1 + pct * 0.2, 1 - pct * 0.3);
+      });
+
+      onTouchEnd((pos) => {
+        if (!dragging) return;
+        sfx.stopStretch();
+
+        // Check if touch was tap swap
+        const touchEndPos = dragCurrent || vec2(0, 0);
+        const dist = dragStart.dist(touchEndPos);
+        if (dist < 15) {
+          dragging = false;
+          dragCurrent = null;
+          discardCurrentItem();
+        } else {
+          fireShot();
+        }
+      });
+
+      function fireShot() {
+        dragging = false;
+        if (!dragCurrent) return;
+        
+        const pull = clampPull(dragCurrent);
+        const vx = (dragStart.x - pull.x) * LAUNCH_SCALE;
+        const vy = (dragStart.y - pull.y) * LAUNCH_SCALE;
+
+        // Ensure shooting is upward direction
+        if (vy < -60) {
+          
+          // CRITICAL: ACCIDENTALLY SWING AND SHOOT A HAZARD => STRIKE PENALTY!
+          if (!currentProjectileType.isGood) {
+            triggerStrike();
+          }
+
+          levelShotsFired++;
+          totalShotsFired++;
+          sfx.playLaunch();
+          
+          // Clear hoops scored flags (for Good projectiles)
+          if (currentProjectileType.isGood) {
+            for (const h of hoops) {
+              h.scored = false;
+            }
+          }
+          
+          spawnBall(vec2(BATTER_X, BATTER_Y - 20), vx, vy);
+        } else {
+          // bounce batter back if shot aborted
+          batter.scale = vec2(1.2, 0.8);
+        }
+        
+        dragCurrent = null;
+        kbPullLength = 0;
+      }
+
+      // Trigger Strike warning, buzzer, screen shake, and check fail status
+      function triggerStrike() {
+        strikes++;
+        updateStrikesHUD();
+        sfx.playBuzzer();
+        shake(18);
+
+        // Character dizzy expression
+        batter.sadTimer = 1.5;
+
+        // Flash strike warning banner
+        const alertEl = document.getElementById("strike-alert");
+        alertEl.classList.remove("hidden");
+        setTimeout(() => alertEl.classList.add("hidden"), 1000);
+
+        // Check fail level conditions
+        if (strikes >= 3) {
+          isMenuPaused = true;
+          sfx.stopStretch();
+          document.getElementById("btn-discard").classList.add("hidden");
+
+          // Delay overlay showing slightly to let ball fly/crash
+          wait(1.2, () => {
+            if (ball) {
+              destroy(ball);
+              ball = null;
+            }
+            triggerThreeStrikesPenalty();
+          });
+        }
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
+      //  KEYBOARD SCHEME CONTROLS (Aim arrows, hold Space to pull, release Space)
+      // ───────────────────────────────────────────────────────────────────────
+      onKeyDown("left", () => {
+        if (isMenuPaused || inFlight) return;
+        usingKeyboardAim = true;
+        kbAimAngle = Math.max(-160, kbAimAngle - 90 * dt()); // rotate left
+      });
+
+      onKeyDown("right", () => {
+        if (isMenuPaused || inFlight) return;
+        usingKeyboardAim = true;
+        kbAimAngle = Math.min(-20, kbAimAngle + 90 * dt()); // rotate right
+      });
+
+      onKeyDown("space", () => {
+        if (isMenuPaused || inFlight) return;
+        usingKeyboardAim = true;
+        dragging = true;
+        dragStart = vec2(BATTER_X, BATTER_Y - 20);
+        
+        // Increase pull over time
+        kbPullLength = Math.min(DRAG_MAX, kbPullLength + 160 * dt());
+        
+        // Calculate coordinate offset from center
+        const angleRad = (kbAimAngle * Math.PI) / 180;
+        dragCurrent = dragStart.sub(vec2(Math.cos(angleRad), Math.sin(angleRad)).scale(kbPullLength));
+        
+        const pct = kbPullLength / DRAG_MAX;
+        sfx.playStretch(pct);
+        batter.scale = vec2(1 + pct * 0.2, 1 - pct * 0.35);
+      });
+
+      onKeyRelease("space", () => {
+        if (!dragging || !usingKeyboardAim) return;
+        sfx.stopStretch();
+        fireShot();
+      });
+
+      // Press Enter key as shortcut to cycle/discard loaded item
+      onKeyPress("return", () => {
+        discardCurrentItem();
+      });
+
+      // Cheat code keys for testing and verification
+      onKeyPress("w", () => {
+        triggerLevelWin();
+      });
+      onKeyPress("c", () => {
+        lightUpNextLetter();
+      });
+      onKeyPress("s", () => {
+        triggerThreeStrikesPenalty();
+      });
+
+    }); // end scene("game")
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  3 STRIKES WATER PENALTY OVERLAY LOGIC
+    // ─────────────────────────────────────────────────────────────────────────
+    let wipeCount = 0;
+    let isWiping = false;
+    let wipeStartX = 0;
+    let wipeStartY = 0;
+
+    const penaltyOverlay = document.getElementById("penalty-overlay");
+    const bucketContainer = document.getElementById("bucket-shadow-container");
+    const waterSplash = document.getElementById("water-splash");
+    const wipeRemaining = document.getElementById("wipe-remaining");
+    const wipeProgressFill = document.getElementById("wipe-progress-fill");
+
+    function triggerThreeStrikesPenalty() {
+      isMenuPaused = true;
+      sfx.stopStretch();
+      if (ball) {
+        destroy(ball);
+        ball = null;
+      }
+      document.getElementById("btn-discard").classList.add("hidden");
+
+      // Show penalty container
+      penaltyOverlay.classList.remove("hidden");
+      
+      // Step 1: Animate giant bucket shadow growing
+      bucketContainer.className = "";
+      // Force layout reflow
+      void bucketContainer.offsetWidth;
+      bucketContainer.classList.add("grow");
+
+      // Step 2: Tip the bucket after 0.8s
+      setTimeout(() => {
+        if (penaltyOverlay.classList.contains("hidden")) return;
+        bucketContainer.classList.add("tip");
+      }, 800);
+
+      // Step 3: Overlay the full screen water splash after 1.2s
+      setTimeout(() => {
+        if (penaltyOverlay.classList.contains("hidden")) return;
+        bucketContainer.classList.add("fade-out");
+        waterSplash.classList.remove("hidden");
+        // Force reflow
+        void waterSplash.offsetWidth;
+        waterSplash.classList.add("show");
+        
+        // Reset wipe counter
+        wipeCount = 0;
+        updateWipeUI();
+        
+        // Play splash sound
+        sfx.playBuzzer();
+      }, 1200);
+    }
+
+    function updateWipeUI() {
+      const remaining = 3 - wipeCount;
+      wipeRemaining.innerText = remaining;
+      wipeProgressFill.style.width = `${(remaining / 3) * 100}%`;
+      waterSplash.style.background = `radial-gradient(circle, rgba(60, 160, 255, ${0.2 + remaining * 0.15}) 0%, rgba(20, 80, 220, ${0.3 + remaining * 0.15}) 100%)`;
+      waterSplash.style.backdropFilter = `blur(${remaining * 2}px)`;
+    }
+
+    function registerWipeAction() {
+      if (wipeCount >= 3) return;
+      
+      wipeCount++;
+      sfx.playWipe();
+      updateWipeUI();
+
+      // Screen flash effect
+      const flash = document.createElement("div");
+      flash.style.position = "absolute";
+      flash.style.top = "0";
+      flash.style.left = "0";
+      flash.style.width = "100%";
+      flash.style.height = "100%";
+      flash.style.background = "rgba(255, 255, 255, 0.25)";
+      flash.style.pointerEvents = "none";
+      flash.style.zIndex = "30";
+      penaltyOverlay.appendChild(flash);
+      setTimeout(() => flash.remove(), 100);
+
+      if (wipeCount >= 3) {
+        // Complete! Fade out splash and resume game
+        waterSplash.classList.remove("show");
+        setTimeout(() => {
+          penaltyOverlay.classList.add("hidden");
+          waterSplash.classList.add("hidden");
+          bucketContainer.className = "";
+          
+          // Reset strikes and resume
+          strikes = 0;
+          updateStrikesHUD();
+          isMenuPaused = false;
+          document.getElementById("btn-discard").classList.remove("hidden");
+        }, 400);
+      }
+    }
+
+    // Touch / Click swipe detection
+    waterSplash.addEventListener("pointerdown", (e) => {
+      isWiping = true;
+      wipeStartX = e.clientX;
+      wipeStartY = e.clientY;
+    });
+
+    waterSplash.addEventListener("pointermove", (e) => {
+      if (!isWiping) return;
+      const dx = e.clientX - wipeStartX;
+      const dy = e.clientY - wipeStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 60) { // Swiped 60px
+        isWiping = false; // Reset to avoid double triggering in one gesture
+        registerWipeAction();
+      }
+    });
+
+    waterSplash.addEventListener("pointerup", (e) => {
+      if (isWiping) {
+        // Just a tap
+        isWiping = false;
+        registerWipeAction();
+      }
+    });
+
+    // Discard loaded item logic
+    function discardCurrentItem() {
+      if (inFlight || isMenuPaused || screenStart.classList.contains("hidden") === false) return;
+      sfx.playDiscard();
+      loadRandomProjectile();
+      
+      // Animate batter scale pop
+      const bat = get("batter")[0];
+      if (bat) {
+        bat.scale = vec2(1.2);
+        bat.happyTimer = 0.5; // happy relieved mouth
+      }
+    }
+
+    // Go to default scene
+    go("game");
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  DOM UI SCREEN OVERLAYS INTERACTION
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    // UI Screen References
+    const screenStart      = document.getElementById("start-screen");
+    const screenLvlSelect  = document.getElementById("lvl-select-screen");
+    const screenPause      = document.getElementById("pause-screen");
+    const screenLevelUp    = document.getElementById("levelup-screen");
+    const screenVictory    = document.getElementById("victory-screen");
+    const screenFail       = document.getElementById("fail-screen");
+
+    // Button References
+    const btnPlayGame        = document.getElementById("btn-play-game");
+    const btnShowLvlSelect   = document.getElementById("btn-show-lvl-select");
+    const btnBackLvlSelect   = document.getElementById("btn-back-lvl-select");
+    const btnResumeGame      = document.getElementById("btn-resume-game");
+    const btnRestartLevel    = document.getElementById("btn-restart-level");
+    const btnQuitGame        = document.getElementById("btn-quit-game");
+    const btnNextLevel       = document.getElementById("btn-next-level");
+    const btnWinReplay       = document.getElementById("btn-win-replay");
+    const btnWinMenu         = document.getElementById("btn-win-menu");
+    const btnRetryLevel      = document.getElementById("btn-retry-level");
+    const btnFailMenu        = document.getElementById("btn-fail-menu");
+    const btnHUDPause        = document.getElementById("btn-pause");
+    const btnHUDSound        = document.getElementById("btn-sound");
+    const btnHUDDiscard      = document.getElementById("btn-discard");
+
+    const lvlGridContainer   = document.getElementById("lvl-grid-container");
+
+    // Populate Level Select Screen Grid Items
+    function populateLevelGrid() {
+      lvlGridContainer.innerHTML = "";
+      LEVELS.forEach((lvl, index) => {
+        const card = document.createElement("div");
+        card.className = `lvl-card ${index === currentLevelIndex ? 'active' : ''}`;
+        card.innerHTML = `
+          <div class="lvl-card-num">Level ${lvl.level}</div>
+          <div class="lvl-card-word">${lvl.word}</div>
+          <div class="lvl-card-desc">${lvl.desc}</div>
+        `;
+        card.addEventListener("click", () => {
+          sfx.playClick();
+          currentLevelIndex = index;
+          populateLevelGrid();
+          startGameFromMenu();
+        });
+        lvlGridContainer.appendChild(card);
+      });
+    }
+
+    populateLevelGrid();
+
+    // Start Game from Menu Handler
+    function startGameFromMenu() {
+      screenStart.classList.add("hidden");
+      screenLvlSelect.classList.add("hidden");
+      screenPause.classList.add("hidden");
+      screenLevelUp.classList.add("hidden");
+      screenVictory.classList.add("hidden");
+      screenFail.classList.add("hidden");
+      
+      isMenuPaused = false;
+      go("game");
+    }
+
+    // Update Top Strikes HUD markers
+    function updateStrikesHUD() {
+      for (let i = 1; i <= 3; i++) {
+        const marker = document.getElementById(`strike-${i}`);
+        if (marker) {
+          if (i <= strikes) {
+            marker.classList.add("active");
+          } else {
+            marker.classList.remove("active");
+          }
+        }
+      }
+    }
+
+    // Event Listeners
+    btnPlayGame.addEventListener("click", () => {
+      sfx.playClick();
+      startGameFromMenu();
+    });
+
+    btnShowLvlSelect.addEventListener("click", () => {
+      sfx.playClick();
+      populateLevelGrid();
+      screenStart.classList.add("hidden");
+      screenLvlSelect.classList.remove("hidden");
+    });
+
+    btnBackLvlSelect.addEventListener("click", () => {
+      sfx.playClick();
+      screenLvlSelect.classList.add("hidden");
+      screenStart.classList.remove("hidden");
+    });
+
+    // Pause functionality
+    btnHUDPause.addEventListener("click", () => {
+      sfx.playClick();
+      triggerPause();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        sfx.playClick();
+        triggerPause();
+      }
+    });
+
+    function triggerPause() {
+      if (screenStart.classList.contains("hidden") && 
+          screenLvlSelect.classList.contains("hidden") && 
+          screenLevelUp.classList.contains("hidden") && 
+          screenVictory.classList.contains("hidden") &&
+          screenFail.classList.contains("hidden")) {
+        
+        isMenuPaused = !isMenuPaused;
+        if (isMenuPaused) {
+          screenPause.classList.remove("hidden");
+          sfx.stopStretch();
+          document.getElementById("btn-discard").classList.add("hidden");
+        } else {
+          screenPause.classList.add("hidden");
+          document.getElementById("btn-discard").classList.remove("hidden");
+        }
+      }
+    }
+
+    btnResumeGame.addEventListener("click", () => {
+      sfx.playClick();
+      isMenuPaused = false;
+      screenPause.classList.add("hidden");
+      document.getElementById("btn-discard").classList.remove("hidden");
+    });
+
+    btnRestartLevel.addEventListener("click", () => {
+      sfx.playClick();
+      isMenuPaused = false;
+      screenPause.classList.add("hidden");
+      go("game");
+    });
+
+    btnQuitGame.addEventListener("click", () => {
+      sfx.playClick();
+      isMenuPaused = true;
+      screenPause.classList.add("hidden");
+      document.getElementById("strike-hud").classList.add("hidden");
+      document.getElementById("btn-discard").classList.add("hidden");
+      screenStart.classList.remove("hidden");
+    });
+
+    // Discard Button click
+    btnHUDDiscard.addEventListener("click", () => {
+      discardCurrentItem();
+    });
+
+    // Audio Toggle Listener
+    btnHUDSound.addEventListener("click", () => {
+      sfx.toggleMute();
+    });
+
+    // Level complete Overlay display
+    function showLevelUpOverlay() {
+      const lvlConfig = LEVELS[currentLevelIndex];
+      document.getElementById("strike-hud").classList.add("hidden");
+      
+      document.getElementById("lvlup-subtitle").innerText = `Complete: ${lvlConfig.name}`;
+      document.getElementById("lvlup-stat-word").innerText = lvlConfig.word;
+      document.getElementById("lvlup-stat-shots").innerText = levelShotsFired;
+      document.getElementById("lvlup-stat-baskets").innerText = levelBasketsScored;
+      document.getElementById("lvlup-stat-score").innerText = `+${levelBasketsScored * 25}`;
+
+      screenLevelUp.classList.remove("hidden");
+    }
+
+    btnNextLevel.addEventListener("click", () => {
+      sfx.playClick();
+      screenLevelUp.classList.add("hidden");
+
+      currentLevelIndex++;
+      if (currentLevelIndex < LEVELS.length) {
+        isMenuPaused = false;
+        go("game");
+      } else {
+        // All cleared -> Victory Screen
+        showVictoryOverlay();
+      }
+    });
+
+    // Victory overlay display
+    function showVictoryOverlay() {
+      isMenuPaused = true;
+      document.getElementById("strike-hud").classList.add("hidden");
+      
+      document.getElementById("win-stat-score").innerText = totalGameScore;
+      document.getElementById("win-stat-shots").innerText = totalShotsFired;
+      
+      const acc = totalShotsFired > 0 ? Math.round((totalBasketsScored / totalShotsFired) * 100) : 0;
+      document.getElementById("win-stat-accuracy").innerText = `${acc}%`;
+
+      screenVictory.classList.remove("hidden");
+    }
+
+    btnWinReplay.addEventListener("click", () => {
+      sfx.playClick();
+      resetStats();
+      startGameFromMenu();
+    });
+
+    btnWinMenu.addEventListener("click", () => {
+      sfx.playClick();
+      resetStats();
+      screenVictory.classList.add("hidden");
+      screenStart.classList.remove("hidden");
+    });
+
+    // Level Fail overlay display
+    function showFailOverlay() {
+      const lvlConfig = LEVELS[currentLevelIndex];
+      document.getElementById("strike-hud").classList.add("hidden");
+
+      document.getElementById("fail-stat-word").innerText = lvlConfig.word;
+      document.getElementById("fail-stat-letters").innerText = `${currentLetterIndex} / ${lvlConfig.word.length}`;
+
+      screenFail.classList.remove("hidden");
+    }
+
+    btnRetryLevel.addEventListener("click", () => {
+      sfx.playClick();
+      screenFail.classList.add("hidden");
+      isMenuPaused = false;
+      go("game");
+    });
+
+    btnFailMenu.addEventListener("click", () => {
+      sfx.playClick();
+      resetStats();
+      screenFail.classList.add("hidden");
+      screenStart.classList.remove("hidden");
+    });
+
+    function resetStats() {
+      currentLevelIndex = 0;
+      totalGameScore = 0;
+      totalShotsFired = 0;
+      totalBasketsScored = 0;
+      levelShotsFired = 0;
+      levelBasketsScored = 0;
+      strikes = 0;
+    }
+  </script>
+</body>
+</html>
