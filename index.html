@@ -286,9 +286,25 @@
     .level-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      gap: 10px;
       width: 100%;
       margin-bottom: 20px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .level-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .level-grid::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.01);
+    }
+    .level-grid::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    .level-grid::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .lvl-card {
@@ -1165,6 +1181,26 @@
         wind: true,
         hoopSpeed: 110,
         desc: "Sidelining gusts change directions every shot!",
+      },
+      {
+        level: 5,
+        name: "Colson's Customs",
+        word: "COLSON",
+        movingHoops: true,
+        hasObstacle: true,
+        wind: false,
+        hoopSpeed: 120,
+        desc: "Aim fast! Spelling Colson's custom words.",
+      },
+      {
+        level: 6,
+        name: "Challenge Mode",
+        word: "ELEPHANT",
+        movingHoops: true,
+        hasObstacle: true,
+        wind: true,
+        hoopSpeed: 130,
+        desc: "The ultimate spelling test under high winds!",
       }
     ];
 
@@ -1193,10 +1229,12 @@
     let strikes = 0;
 
     const LEVEL_WORDS = {
-      1: ["CAT", "DOG", "PIG"],
-      2: ["PLAY", "JUMP", "FROG"],
-      3: ["KABOOM", "WACKY", "SLING"],
-      4: ["SPELLED", "VICTORY", "WACKIEST"]
+      1: ["CAT", "DOG", "PIG", "COW", "BAT", "BUG"], // Pre-K / K (3 letters)
+      2: ["PLAY", "JUMP", "FROG", "BIRD", "FISH", "BEAR"], // K / 1st Grade (4 letters)
+      3: ["APPLE", "HAPPY", "TIGER", "WATER", "SNAKE"], // 1st Grade (5 letters)
+      4: ["YELLOW", "SCHOOL", "FRIEND", "MONKEY", "ORANGE"], // 2nd Grade (6 letters)
+      5: ["COLSON", "BASEBALL", "CHICKEN", "TEACHER"], // Colson's Customs
+      6: ["ELEPHANT", "DINOSAUR", "UMBRELLA", "ASTRONAUT"], // 3rd Grade (Challenge words)
     };
     let currentWord = "";
     let completedWords = [];
@@ -2810,15 +2848,21 @@
 
     const lvlGridContainer   = document.getElementById("lvl-grid-container");
 
-    // Populate Level Select Screen Grid Items
     function populateLevelGrid() {
       lvlGridContainer.innerHTML = "";
-      LEVELS.forEach((lvl, index) => {
+      Object.keys(LEVEL_WORDS).forEach((lvlKey) => {
+        const lvlNum = parseInt(lvlKey);
+        const index = lvlNum - 1;
+        const lvl = LEVELS[index] || {
+          level: lvlNum,
+          name: `Level ${lvlNum}`,
+          desc: "Dynamic spelling level challenges!"
+        };
         const card = document.createElement("div");
         card.className = `lvl-card ${index === currentLevelIndex ? 'active' : ''}`;
-        const wordsList = LEVEL_WORDS[lvl.level] ? LEVEL_WORDS[lvl.level].join(", ") : lvl.word;
+        const wordsList = LEVEL_WORDS[lvlNum] ? LEVEL_WORDS[lvlNum].join(", ") : "";
         card.innerHTML = `
-          <div class="lvl-card-num">Level ${lvl.level}</div>
+          <div class="lvl-card-num">Level ${lvlNum}</div>
           <div class="lvl-card-word">${wordsList}</div>
           <div class="lvl-card-desc">${lvl.desc}</div>
         `;
