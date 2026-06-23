@@ -1251,6 +1251,8 @@
     let netObjects   = [];
     let letterBubbles = [];
     let targetWordLabel = null;
+    let speakerBtn = null;
+    let speakerBg = null;
     let obstacleObj  = null;
     let curWindVal   = 0;
     let isMenuPaused = false;
@@ -1508,10 +1510,17 @@
         selectRandomWord();
       }
 
-      // Clear target word label if any
+      // Clear target word label, speaker button, and speaker background if any
       if (targetWordLabel) {
         destroy(targetWordLabel);
       }
+      if (speakerBtn) {
+        destroy(speakerBtn);
+      }
+      if (speakerBg) {
+        destroy(speakerBg);
+      }
+
       // Add target word text label
       targetWordLabel = add([
         text("Target: " + currentWord, { size: 10, font: "monospace" }),
@@ -1520,6 +1529,36 @@
         color(140, 140, 160),
         z(3)
       ]);
+
+      // Add speaker button circular glassmorphism background & icon
+      const labelText = "Target: " + currentWord;
+      const speakerX = W / 2 + (labelText.length * 6) / 2 + 14;
+
+      speakerBg = add([
+        circle(10),
+        pos(speakerX, 40),
+        color(40, 40, 75),
+        opacity(0.3),
+        z(2)
+      ]);
+
+      speakerBtn = add([
+        text("🔊", { size: 12, font: "sans-serif" }),
+        pos(speakerX, 40),
+        anchor("center"),
+        area({ cursor: "pointer" }),
+        z(3),
+        "speaker"
+      ]);
+
+      speakerBtn.onClick(() => {
+        speakWord(currentWord);
+        // Micro-animation click feedback
+        speakerBtn.scale = vec2(1.2);
+        wait(0.1, () => {
+          speakerBtn.scale = vec2(1.0);
+        });
+      });
 
       // Draw Letter Bubbles for spelling (initially all blanks)
       const wordArr = currentWord.split("");
@@ -2785,6 +2824,7 @@
         `;
         card.addEventListener("click", () => {
           sfx.playClick();
+          initSpeech();
           currentLevelIndex = index;
           populateLevelGrid();
           startGameFromMenu();
@@ -2834,6 +2874,7 @@
     // Event Listeners
     btnPlayGame.addEventListener("click", () => {
       sfx.playClick();
+      initSpeech();
       startGameFromMenu();
     });
 
@@ -3025,6 +3066,7 @@
       }
       
       currentWord = availableWords[Math.floor(rand(0, availableWords.length))];
+      speakWord(currentWord);
       return currentWord;
     }
 
@@ -3055,6 +3097,13 @@
       if (targetWordLabel) {
         destroy(targetWordLabel);
       }
+      if (speakerBtn) {
+        destroy(speakerBtn);
+      }
+      if (speakerBg) {
+        destroy(speakerBg);
+      }
+
       targetWordLabel = add([
         text("Target: " + currentWord, { size: 10, font: "monospace" }),
         pos(W / 2, 40),
@@ -3062,6 +3111,35 @@
         color(140, 140, 160),
         z(3)
       ]);
+
+      const labelText = "Target: " + currentWord;
+      const speakerX = W / 2 + (labelText.length * 6) / 2 + 14;
+
+      speakerBg = add([
+        circle(10),
+        pos(speakerX, 40),
+        color(40, 40, 75),
+        opacity(0.3),
+        z(2)
+      ]);
+
+      speakerBtn = add([
+        text("🔊", { size: 12, font: "sans-serif" }),
+        pos(speakerX, 40),
+        anchor("center"),
+        area({ cursor: "pointer" }),
+        z(3),
+        "speaker"
+      ]);
+
+      speakerBtn.onClick(() => {
+        speakWord(currentWord);
+        // Micro-animation click feedback
+        speakerBtn.scale = vec2(1.2);
+        wait(0.1, () => {
+          speakerBtn.scale = vec2(1.0);
+        });
+      });
 
       letterBubbles.forEach(b => {
         destroy(b.bg);
@@ -3130,6 +3208,57 @@
           hoop.letter = randomL;
         }
       });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  SPEECH SYNTHESIS ANNOUNCER ENGINE
+    // ─────────────────────────────────────────────────────────────────────────
+    let speechUnlocked = false;
+
+    function initSpeech() {
+      if (speechUnlocked) return;
+      if (!window.speechSynthesis) return;
+      try {
+        const utterance = new SpeechSynthesisUtterance("");
+        utterance.volume = 0;
+        window.speechSynthesis.speak(utterance);
+        speechUnlocked = true;
+      } catch (e) {
+        console.warn("Speech synthesis unlock failed:", e);
+      }
+    }
+
+    // Attach unlock event listeners for initial user interaction
+    window.addEventListener("click", initSpeech, { once: true });
+    window.addEventListener("touchstart", initSpeech, { once: true });
+
+    function speakWord(word) {
+      if (!word) return;
+      if (!window.speechSynthesis) return;
+
+      // Force unlocking on gesture if called within standard callback
+      initSpeech();
+
+      try {
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(`Spell the word: ${word}`);
+        utterance.rate = 0.85; // friendly speed for kids
+        
+        // Select an English voice if available
+        if (window.speechSynthesis.getVoices) {
+          const voices = window.speechSynthesis.getVoices();
+          const enVoice = voices.find(v => v.lang.startsWith("en") && v.localService) || 
+                          voices.find(v => v.lang.startsWith("en"));
+          if (enVoice) {
+            utterance.voice = enVoice;
+          }
+        }
+        
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn("Speech synthesis speak failed:", e);
+      }
     }
   </script>
 </body>
