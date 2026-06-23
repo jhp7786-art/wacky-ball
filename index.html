@@ -321,9 +321,13 @@
     }
     .lvl-card-word {
       font-family: 'Fredoka', sans-serif;
-      font-size: 18px;
+      font-size: 13px;
       font-weight: 700;
       color: #ffffff;
+      word-break: break-word;
+      text-align: center;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
     }
     .lvl-card-desc {
       font-size: 10px;
@@ -1246,6 +1250,7 @@
     let hoops        = [];
     let netObjects   = [];
     let letterBubbles = [];
+    let targetWordLabel = null;
     let obstacleObj  = null;
     let curWindVal   = 0;
     let isMenuPaused = false;
@@ -1503,11 +1508,24 @@
         selectRandomWord();
       }
 
+      // Clear target word label if any
+      if (targetWordLabel) {
+        destroy(targetWordLabel);
+      }
+      // Add target word text label
+      targetWordLabel = add([
+        text("Target: " + currentWord, { size: 10, font: "monospace" }),
+        pos(W / 2, 40),
+        anchor("center"),
+        color(140, 140, 160),
+        z(3)
+      ]);
+
       // Draw Letter Bubbles for spelling (initially all blanks)
       const wordArr = currentWord.split("");
       const LETTER_SPACING = 36;
       const startX = W / 2 - ((wordArr.length - 1) * LETTER_SPACING) / 2;
-      const bubbleY = 64;
+      const bubbleY = 70;
 
       for (let i = 0; i < wordArr.length; i++) {
         const lx = startX + i * LETTER_SPACING;
@@ -2759,9 +2777,10 @@
       LEVELS.forEach((lvl, index) => {
         const card = document.createElement("div");
         card.className = `lvl-card ${index === currentLevelIndex ? 'active' : ''}`;
+        const wordsList = LEVEL_WORDS[lvl.level] ? LEVEL_WORDS[lvl.level].join(", ") : lvl.word;
         card.innerHTML = `
           <div class="lvl-card-num">Level ${lvl.level}</div>
-          <div class="lvl-card-word">${lvl.word}</div>
+          <div class="lvl-card-word">${wordsList}</div>
           <div class="lvl-card-desc">${lvl.desc}</div>
         `;
         card.addEventListener("click", () => {
@@ -3033,6 +3052,17 @@
     }
 
     function rebuildLetterBubbles() {
+      if (targetWordLabel) {
+        destroy(targetWordLabel);
+      }
+      targetWordLabel = add([
+        text("Target: " + currentWord, { size: 10, font: "monospace" }),
+        pos(W / 2, 40),
+        anchor("center"),
+        color(140, 140, 160),
+        z(3)
+      ]);
+
       letterBubbles.forEach(b => {
         destroy(b.bg);
         destroy(b.txt);
@@ -3045,7 +3075,7 @@
       const wordArr = currentWord.split("");
       const LETTER_SPACING = 36;
       const startX = W / 2 - ((wordArr.length - 1) * LETTER_SPACING) / 2;
-      const bubbleY = 64;
+      const bubbleY = 70;
 
       for (let i = 0; i < wordArr.length; i++) {
         const lx = startX + i * LETTER_SPACING;
