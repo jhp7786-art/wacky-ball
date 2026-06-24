@@ -722,154 +722,7 @@
       </div>
     </div>
 
-    <!-- Start Screen Overlay -->
-    <div class="overlay-screen" id="start-screen">
-      <div class="menu-card">
-        <img src="wacky_ball_logo.png" class="logo-img" alt="Wacky Ball Logo" />
-        <h1>Wacky Ball</h1>
-        <div class="subtitle">Spellbound Edition</div>
-        
-        <div class="score-badge" id="start-highscore-badge">
-          High Score: 0
-        </div>
 
-        <button class="btn btn-primary" id="btn-play-game">
-          PLAY GAME
-        </button>
-        <button class="btn btn-secondary" id="btn-show-lvl-select">
-          LEVEL SELECT
-        </button>
-
-        <div class="keyboard-help">
-          🎮 <b>Controls:</b><br/>
-          • Drag batter backwards & release to shoot.<br/>
-          • Click the **Batter / Discard Button** to swap items!<br/>
-          • Use **Arrow Keys** to aim, **Spacebar** to shoot.
-        </div>
-      </div>
-    </div>
-
-    <!-- Level Select Overlay -->
-    <div class="overlay-screen hidden" id="lvl-select-screen">
-      <div class="menu-card">
-        <h1>Select Level</h1>
-        <div class="subtitle">Spell the words, conquer the hurdles!</div>
-
-        <div class="level-grid" id="lvl-grid-container">
-          <!-- Populated dynamically via JS -->
-        </div>
-
-        <button class="btn btn-secondary" id="btn-back-lvl-select">
-          BACK TO MENU
-        </button>
-      </div>
-    </div>
-
-    <!-- Pause Menu Overlay -->
-    <div class="overlay-screen hidden" id="pause-screen">
-      <div class="menu-card">
-        <h1>Game Paused</h1>
-        <div class="subtitle">Spellbound slingshot action</div>
-
-        <button class="btn btn-primary" id="btn-resume-game">
-          RESUME
-        </button>
-        <button class="btn btn-secondary" id="btn-restart-level">
-          RESTART LEVEL
-        </button>
-        <button class="btn btn-secondary" id="btn-quit-game">
-          QUIT TO MENU
-        </button>
-      </div>
-    </div>
-
-    <!-- Level Complete / Level Up Overlay -->
-    <div class="overlay-screen hidden" id="levelup-screen">
-      <div class="menu-card">
-        <h1 style="color: #ffd23c;">🎉 Word Spelled!</h1>
-        <div class="subtitle" id="lvlup-subtitle">Level 1 Complete</div>
-
-        <div class="stats-container">
-          <div class="stat-row">
-            <span class="stat-label">Word:</span>
-            <span class="stat-val" id="lvlup-stat-word" style="color: #3cd2ff; font-weight: 800; letter-spacing: 1px;">COLSON</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Shots Fired:</span>
-            <span class="stat-val" id="lvlup-stat-shots">5</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Baskets Scored:</span>
-            <span class="stat-val" id="lvlup-stat-baskets">6</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Score Gained:</span>
-            <span class="stat-val" id="lvlup-stat-score" style="color: #22c55e;">+150</span>
-          </div>
-        </div>
-
-        <button class="btn btn-primary" id="btn-next-level">
-          NEXT LEVEL
-        </button>
-      </div>
-    </div>
-
-    <!-- Game Cleared / Victory Overlay -->
-    <div class="overlay-screen hidden" id="victory-screen">
-      <div class="menu-card">
-        <img src="wacky_ball_logo.png" class="logo-img" alt="Wacky Ball Logo" style="width: 100px; height: 100px;" />
-        <h1 style="color: #ffd23c;">🏆 GAME CLEARED!</h1>
-        <div class="subtitle">You are the ultimate Speller!</div>
-
-        <div class="stats-container">
-          <div class="stat-row">
-            <span class="stat-label">Total Score:</span>
-            <span class="stat-val" id="win-stat-score" style="color: #ffd23c; font-size: 18px; font-weight: 800;">520</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Total Shots:</span>
-            <span class="stat-val" id="win-stat-shots">14</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Spelling Accuracy:</span>
-            <span class="stat-val" id="win-stat-accuracy" style="color: #3cd2ff;">85%</span>
-          </div>
-        </div>
-
-        <button class="btn btn-primary" id="btn-win-replay">
-          PLAY AGAIN
-        </button>
-        <button class="btn btn-secondary" id="btn-win-menu">
-          MAIN MENU
-        </button>
-      </div>
-    </div>
-
-    <!-- Level Failed / 3 Strikes Overlay -->
-    <div class="overlay-screen hidden" id="fail-screen">
-      <div class="menu-card" style="border-color: rgba(255, 80, 80, 0.4); box-shadow: var(--glow-red);">
-        <h1 style="color: #ff5050;">⚠️ LEVEL FAILED</h1>
-        <div class="subtitle">3 Strikes! Avoid launching Hazards!</div>
-        
-        <div class="stats-container" style="background: rgba(255,80,80,0.05); border-color: rgba(255,80,80,0.15);">
-          <div class="stat-row">
-            <span class="stat-label">Failed Word:</span>
-            <span class="stat-val" id="fail-stat-word" style="color: #ff8080;">COLSON</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Letters Lit:</span>
-            <span class="stat-val" id="fail-stat-letters">3 / 6</span>
-          </div>
-        </div>
-
-        <button class="btn btn-primary" id="btn-retry-level">
-          RETRY LEVEL
-        </button>
-        <button class="btn btn-secondary" id="btn-fail-menu">
-          MAIN MENU
-        </button>
-      </div>
-    </div>
 
   <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.js"></script>
   <script>
@@ -1186,7 +1039,7 @@
     // --- GLOBAL STATE ---
     // Single object holding all mutable runtime state for the current session.
     // ─────────────────────────────────────────────────────────────────────────
-    const savedEconomy = JSON.parse(localStorage.getItem("wacky_economy") || '{"coins":0,"unlockedPlayerSkins":["default"],"equippedPlayerSkin":"default","unlockedBallColors":["white"],"equippedBallColor":"white"}');
+    let currentProfile = null;
 
     const gameState = {
       currentLevelIndex:     0,    // Index into LEVELS[]
@@ -1200,26 +1053,46 @@
       completedWords:        [],   // Words already spelled this level run
       currentLetterIndex:    0,    // Next required letter index into currentWord
       currentProjectileType: null, // Loaded PROJECTILES entry object
-      coins:                 savedEconomy.coins,
-      unlockedPlayerSkins:   savedEconomy.unlockedPlayerSkins,
-      equippedPlayerSkin:    savedEconomy.equippedPlayerSkin,
-      unlockedBallColors:    savedEconomy.unlockedBallColors,
-      equippedBallColor:     savedEconomy.equippedBallColor,
+      coins:                 0,
+      unlockedPlayerSkins:   ["default"],
+      equippedPlayerSkin:    "default",
+      unlockedBallColors:    ["white"],
+      equippedBallColor:     "white",
     };
 
-    function saveEconomy() {
-      localStorage.setItem("wacky_economy", JSON.stringify({
-        coins: gameState.coins,
-        unlockedPlayerSkins: gameState.unlockedPlayerSkins,
-        equippedPlayerSkin: gameState.equippedPlayerSkin,
-        unlockedBallColors: gameState.unlockedBallColors,
-        equippedBallColor: gameState.equippedBallColor
-      }));
+    function resetGameStateToDefaults() {
+      gameState.coins = 0;
+      gameState.unlockedPlayerSkins = ["default"];
+      gameState.equippedPlayerSkin = "default";
+      gameState.unlockedBallColors = ["white"];
+      gameState.equippedBallColor = "white";
+      gameState.currentLevelIndex = 0;
+      gameState.totalGameScore = 0;
+      gameState.totalShotsFired = 0;
+      gameState.totalBasketsScored = 0;
+      gameState.strikes = 0;
+      gameState.completedWords = [];
+      gameState.currentWord = "";
     }
 
-    // Persisted high score
-    let highScore = parseInt(localStorage.getItem("wacky_highscore") || "0");
-    document.getElementById("start-highscore-badge").innerText = `High Score: ${highScore}`;
+    function loadGame() {
+      if (currentProfile && currentProfile !== 'Guest') {
+        const saved = localStorage.getItem('wackyball_' + currentProfile);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          Object.assign(gameState, parsed);
+        } else {
+          resetGameStateToDefaults();
+        }
+      } else {
+        resetGameStateToDefaults();
+      }
+    }
+
+    function saveGame() {
+      if (!currentProfile || currentProfile === 'Guest') return;
+      localStorage.setItem('wackyball_' + currentProfile, JSON.stringify(gameState));
+    }
 
     // Scene-scoped drag / flight tracking (reset each scene load)
     let dragging         = false;
@@ -1678,7 +1551,7 @@
 
         targetWordLabel.onClick(() => {
           gameState.coins += 1;
-          saveEconomy();
+          saveGame();
           const coinsHUD = get("coinsHUD")[0];
           if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
           const cf = add([text("+1", {size: 14, font: "monospace"}), pos(targetWordLabel.pos.x + 60, targetWordLabel.pos.y), color(255,215,0), z(5)]);
@@ -2229,46 +2102,52 @@
 
     }); // end scene("game")
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  DOM UI SCREEN OVERLAYS & NAVIGATION
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const screenStart     = document.getElementById("start-screen");
-    const screenLvlSelect = document.getElementById("lvl-select-screen");
-    const screenPause     = document.getElementById("pause-screen");
-    const screenLevelUp   = document.getElementById("levelup-screen");
-    const screenVictory   = document.getElementById("victory-screen");
-    const screenFail      = document.getElementById("fail-screen");
-    const lvlGridContainer = document.getElementById("lvl-grid-container");
-
-    const btnPlayGame      = document.getElementById("btn-play-game");
-    const btnShowLvlSelect = document.getElementById("btn-show-lvl-select");
-    const btnBackLvlSelect = document.getElementById("btn-back-lvl-select");
-    const btnResumeGame    = document.getElementById("btn-resume-game");
-    const btnRestartLevel  = document.getElementById("btn-restart-level");
-    const btnQuitGame      = document.getElementById("btn-quit-game");
-    const btnNextLevel     = document.getElementById("btn-next-level");
-    const btnWinReplay     = document.getElementById("btn-win-replay");
-    const btnWinMenu       = document.getElementById("btn-win-menu");
-    const btnRetryLevel    = document.getElementById("btn-retry-level");
-    const btnFailMenu      = document.getElementById("btn-fail-menu");
     const btnHUDPause      = document.getElementById("btn-pause");
     const btnHUDSound      = document.getElementById("btn-sound");
     const btnHUDDiscard    = document.getElementById("btn-discard");
-
-    function startGameFromMenu() {
-      [screenStart,screenLvlSelect,screenPause,screenLevelUp,screenVictory,screenFail].forEach(s=>s.classList.add("hidden"));
-      penaltyOverlay.classList.add("hidden"); waterSplash.classList.add("hidden"); mudSplash.classList.add("hidden");
-      bucketContainer.className=""; wipeCount=0; mudWipeCount=0;
-      gameState.completedWords=[]; gameState.currentWord=""; isMenuPaused=false;
-      go("game");
-    }
 
     function resetStats() {
       gameState.currentLevelIndex=0; gameState.totalGameScore=0; gameState.totalShotsFired=0;
       gameState.totalBasketsScored=0; gameState.levelShotsFired=0; gameState.levelBasketsScored=0;
       gameState.strikes=0; gameState.completedWords=[]; gameState.currentWord="";
     }
+
+    function showLevelUpOverlay() {
+      alert(`Word Spelled! +${gameState.levelBasketsScored*25} Score`);
+      gameState.currentLevelIndex++;
+      if(gameState.currentLevelIndex < LEVELS.length){
+        isMenuPaused = false;
+        gameState.completedWords = [];
+        gameState.currentWord = "";
+        go("game");
+      } else {
+        showVictoryOverlay();
+      }
+    }
+
+    function showVictoryOverlay() {
+      alert(`🏆 GAME CLEARED! Total Score: ${gameState.totalGameScore}`);
+      resetStats();
+      go("menu");
+    }
+
+    function showFailOverlay() {
+      alert(`⚠️ LEVEL FAILED. 3 Strikes!`);
+      resetStats();
+      go("menu");
+    }
+
+    function triggerPause() {
+      isMenuPaused = !isMenuPaused;
+      if (isMenuPaused) {
+        sfx.stopStretch();
+      }
+    }
+
+    btnHUDPause.addEventListener("click",()=>{sfx.playClick();triggerPause();});
+    window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
+    btnHUDDiscard.addEventListener("click",()=>{discardCurrentItem();});
+    btnHUDSound.addEventListener("click",()=>{sfx.toggleMute();});
 
     function populateLevelGrid() {
       lvlGridContainer.innerHTML="";
@@ -2358,6 +2237,77 @@
       { id: "neon", name: "Neon Blue", cost: 15 }
     ];
 
+    // ── Main Menu Scene ──────────────────────────────────────────────────
+    scene("menu", () => {
+      document.getElementById("lvl-hud").style.display = "none";
+      document.querySelector(".hud-controls").style.display = "none";
+      document.getElementById("strike-hud").classList.add("hidden");
+      document.getElementById("btn-discard").classList.add("hidden");
+
+      add([rect(W, H), color(15, 15, 30), z(0)]);
+
+      // Title
+      add([text("Wackyball", { size: 48, font: "monospace" }), pos(W/2, 80), anchor("center"), color(255, 215, 0)]);
+
+      function makeBtn(txt, y, onClickFn) {
+        const b = add([rect(240, 50, { radius: 8 }), pos(W/2, y), anchor("center"), color(50, 100, 200), area({cursor:"pointer"})]);
+        b.add([text(txt, { size: 18, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+        b.onClick(() => { sfx.playClick(); onClickFn(); });
+        return b;
+      }
+
+      if (currentProfile === null) {
+        makeBtn("Create / Load Profile", 220, () => {
+          const name = window.prompt("Enter player name:");
+          if (name && name.trim().length > 0) {
+            currentProfile = name.trim();
+            loadGame();
+            go("menu");
+          }
+        });
+        makeBtn("Free Play", 290, () => {
+          currentProfile = "Guest";
+          loadGame();
+          go("menu");
+        });
+      } else {
+        add([text(`Welcome, ${currentProfile}!`, { size: 20, font: "monospace" }), pos(W/2, 140), anchor("center"), color(100, 255, 100)]);
+        add([text(`Coins: ${gameState.coins}`, { size: 16, font: "monospace" }), pos(W/2, 170), anchor("center"), color(255, 215, 0)]);
+
+        makeBtn("Play Game", 240, () => { go("game"); });
+        makeBtn("Level Select", 310, () => { go("levelSelect"); });
+        makeBtn("Visit Shop", 380, () => { go("shop"); });
+        makeBtn("Change Profile", 450, () => { currentProfile = null; go("menu"); });
+      }
+    });
+
+    // ── Level Select Scene ───────────────────────────────────────────────
+    scene("levelSelect", () => {
+      document.getElementById("lvl-hud").style.display = "none";
+      document.querySelector(".hud-controls").style.display = "none";
+
+      add([rect(W, H), color(15, 15, 30), z(0)]);
+      add([text("Select Level", { size: 36, font: "monospace" }), pos(W/2, 60), anchor("center"), color(200, 200, 255)]);
+
+      LEVELS.forEach((lvl, i) => {
+        const x = W/2;
+        const y = 140 + i * 65;
+        const btn = add([rect(280, 50, { radius: 8 }), pos(x, y), anchor("center"), color(40, 150, 40), area({cursor:"pointer"})]);
+        btn.add([text(`Level ${lvl.level}: ${lvl.name}`, { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+        btn.onClick(() => {
+          sfx.playClick();
+          gameState.currentLevelIndex = i;
+          gameState.completedWords = [];
+          gameState.currentWord = "";
+          go("game");
+        });
+      });
+
+      const btnBack = add([rect(120, 40, { radius: 8 }), pos(W/2, H - 60), anchor("center"), color(200, 50, 50), area({cursor:"pointer"})]);
+      btnBack.add([text("BACK", { size: 16, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+      btnBack.onClick(() => { sfx.playClick(); go("menu"); });
+    });
+
     // ── Shop Scene ───────────────────────────────────────────────────────
     scene("shop", () => {
       document.getElementById("lvl-hud").style.display = "none";
@@ -2372,7 +2322,7 @@
 
       const btnBack = add([rect(100, 40, { radius: 8 }), pos(W/2, H - 40), anchor("center"), color(200, 50, 50), area({cursor:"pointer"})]);
       btnBack.add([text("BACK", { size: 18, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
-      btnBack.onClick(() => { sfx.playClick(); go("game"); });
+      btnBack.onClick(() => { sfx.playClick(); go("menu"); });
 
       function createShopList(title, items, type, startY) {
         add([text(title, { size: 20, font: "monospace" }), pos(W/2, startY), anchor("center"), color(255, 255, 255)]);
@@ -2393,13 +2343,13 @@
               sfx.playClick();
               if (type === "skin") gameState.equippedPlayerSkin = item.id;
               else gameState.equippedBallColor = item.id;
-              saveEconomy(); go("shop");
+              saveGame(); go("shop");
             } else if (gameState.coins >= item.cost) {
               sfx.playClick();
               gameState.coins -= item.cost;
               if (type === "skin") { gameState.unlockedPlayerSkins.push(item.id); gameState.equippedPlayerSkin = item.id; }
               else { gameState.unlockedBallColors.push(item.id); gameState.equippedBallColor = item.id; }
-              saveEconomy(); go("shop");
+              saveGame(); go("shop");
             } else {
               sfx.playBuzzer();
               row.use(color(200, 50, 50));
@@ -2414,7 +2364,7 @@
     });
 
     // Kick off the game
-    go("game");
+    go("menu");
 
   </script>
 </body>
