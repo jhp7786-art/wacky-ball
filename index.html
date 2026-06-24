@@ -598,6 +598,62 @@
       0%, 100% { box-shadow: 0 10px 30px rgba(0, 100, 255, 0.3); }
       50% { box-shadow: 0 10px 45px rgba(0, 150, 255, 0.6); }
     }
+
+    /* Mud splatter overlay styles */
+    #mud-splash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      background: radial-gradient(circle, rgba(120, 80, 50, 0.4) 0%, rgba(60, 40, 25, 0.7) 100%);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #mud-splash.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #mud-splash.hidden {
+      display: none !important;
+    }
+    .mud-instruction {
+      background: rgba(45, 30, 15, 0.85);
+      border: 1.5px solid rgba(160, 100, 60, 0.4);
+      box-shadow: 0 10px 30px rgba(100, 60, 20, 0.3), 0 0 20px rgba(160, 100, 60, 0.2);
+      border-radius: 24px;
+      padding: 30px 24px;
+      width: 85%;
+      max-width: 320px;
+      text-align: center;
+      animation: pulseBrownGlow 2s infinite ease-in-out;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #mud-splash.show .mud-instruction {
+      transform: scale(1.0);
+    }
+    @keyframes pulseBrownGlow {
+      0%, 100% { box-shadow: 0 10px 30px rgba(120, 80, 40, 0.3); }
+      50% { box-shadow: 0 10px 45px rgba(150, 100, 50, 0.6); }
+    }
+    .mud-drip {
+      position: absolute;
+      background: linear-gradient(180deg, rgba(90, 60, 35, 0.85) 0%, rgba(50, 30, 15, 0.3) 100%);
+      width: 12px;
+      height: 60px;
+      border-radius: 6px;
+      opacity: 0.85;
+      animation: dripAnimation 5s infinite linear;
+    }
   </style>
 </head>
 <body>
@@ -670,6 +726,22 @@
           <h2>SCREEN IS WET!</h2>
           <p>Tap or Swipe <span id="wipe-remaining">3</span> times to wipe it away!</p>
           <div class="wipe-progress-bar"><div id="wipe-progress-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- Mud splash overlay -->
+      <div id="mud-splash" class="hidden">
+        <!-- Dripping mud drops -->
+        <div class="mud-drip drip-1" style="width: 14px; height: 50px; background: rgba(90, 60, 35, 0.95);"></div>
+        <div class="mud-drip drip-2" style="width: 10px; height: 70px; background: rgba(80, 55, 30, 0.9);"></div>
+        <div class="mud-drip drip-3" style="width: 16px; height: 45px; background: rgba(95, 65, 38, 0.95);"></div>
+        <div class="mud-drip drip-4" style="width: 12px; height: 60px; background: rgba(70, 45, 25, 0.98);"></div>
+        <div class="mud-drip drip-5" style="width: 15px; height: 55px; background: rgba(85, 55, 30, 0.92);"></div>
+        <div class="mud-instruction">
+          <span class="wipe-icon">🟤</span>
+          <h2 style="color: #ffaa44; font-family: 'Fredoka', sans-serif; font-size: 26px; margin: 12px 0 6px; font-weight: 700; text-shadow: 0 0 10px rgba(208, 128, 48, 0.5);">SCREEN IS MUDDY!</h2>
+          <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 16px;">Tap or Swipe <span id="mud-wipe-remaining" style="color: #ffaa44; font-weight: 800; font-size: 18px;">3</span> times to clean it!</p>
+          <div class="wipe-progress-bar" style="background: rgba(255, 255, 255, 0.1);"><div id="mud-wipe-progress-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #ffaa44, #d08030); transition: width 0.3s ease; border-radius: 4px;"></div></div>
         </div>
       </div>
     </div>
@@ -1212,11 +1284,13 @@
         { type: "watermelon", name: "Watermelon", isGood: true, mass: 1.0, bounce: 0.72 },
         { type: "chicken", name: "Rubber Chicken", isGood: true, mass: 0.85, bounce: 0.5 },
         { type: "gum", name: "Bubble Gum", isGood: true, mass: 0.6, bounce: 0.96 },
-        { type: "beachball", name: "Beach Ball", isGood: true, mass: 0.38, bounce: 0.8 }
+        { type: "beachball", name: "Beach Ball", isGood: true, mass: 0.38, bounce: 0.8 },
+        { type: "soap", name: "Soap Ball", isGood: true, mass: 0.7, bounce: 0.82 }
       ],
       hazard: [
         { type: "bowling", name: "Bowling Ball", isGood: false, mass: 2.3, bounce: 0.35 },
-        { type: "anvil", name: "Anvil", isGood: false, mass: 3.5, bounce: 0.15 }
+        { type: "anvil", name: "Anvil", isGood: false, mass: 3.5, bounce: 0.15 },
+        { type: "mudpie", name: "Mud Pie", isGood: false, mass: 0.8, bounce: 0.3 }
       ]
     };
 
@@ -1441,13 +1515,55 @@
       });
     }
 
+    function drawSoapBall(pos, radius, alpha = 1.0) {
+      // Light cyan/white translucent ball
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(180, 240, 255),
+        opacity: alpha * 0.85,
+        outline: { color: rgb(60, 200, 255), width: 1.5 }
+      });
+      // Inner bubble highlight circles
+      drawCircle({
+        pos: pos.add(vec2(-radius * 0.35, -radius * 0.35)),
+        radius: radius * 0.2,
+        color: rgb(255, 255, 255),
+        opacity: alpha * 0.9
+      });
+      // Extra soap suds bubbles inside
+      drawCircle({
+        pos: pos.add(vec2(radius * 0.3, radius * 0.2)),
+        radius: radius * 0.24,
+        color: rgb(255, 255, 255),
+        opacity: alpha * 0.5
+      });
+    }
+
+    function drawMudPie(pos, radius, alpha = 1.0) {
+      // Brown mud circle
+      drawCircle({
+        pos,
+        radius,
+        color: rgb(120, 80, 50),
+        opacity: alpha,
+        outline: { color: rgb(60, 40, 25), width: 1.5 }
+      });
+      // Wacky lumps/specs
+      drawCircle({ pos: pos.add(vec2(-4, -4)), radius: 3, color: rgb(75, 50, 30), opacity: alpha });
+      drawCircle({ pos: pos.add(vec2(4, 2)), radius: 4, color: rgb(75, 50, 30), opacity: alpha });
+      drawCircle({ pos: pos.add(vec2(-2, 5)), radius: 2, color: rgb(60, 40, 25), opacity: alpha });
+    }
+
     function drawProjectile(type, pos, radius, alpha = 1.0) {
       if (type === "watermelon") drawWatermelon(pos, radius, alpha);
       else if (type === "chicken") drawChicken(pos, radius, alpha);
       else if (type === "gum") drawGum(pos, radius, alpha);
       else if (type === "beachball") drawBeachBall(pos, radius, alpha);
+      else if (type === "soap") drawSoapBall(pos, radius, alpha);
       else if (type === "bowling") drawBowling(pos, radius, alpha);
       else if (type === "anvil") drawAnvil(pos, radius, alpha);
+      else if (type === "mudpie") drawMudPie(pos, radius, alpha);
     }
 
     // Load random good or hazard projectile
@@ -1502,8 +1618,10 @@
       // Reset penalty overlay UI
       document.getElementById("penalty-overlay").classList.add("hidden");
       document.getElementById("water-splash").classList.add("hidden");
+      document.getElementById("mud-splash").classList.add("hidden");
       document.getElementById("bucket-shadow-container").className = "";
       wipeCount = 0;
+      mudWipeCount = 0;
 
       kbPullLength = 0;
       kbAimAngle = -90;
@@ -1712,6 +1830,7 @@
             initialIndex: i,
             dir: i % 2 === 0 ? 1 : -1,
             scored: false,
+            stained: false,
             netRef: net,
             letter: "",
             draw() {
@@ -1720,20 +1839,31 @@
               const bottomY = HOOP_H / 2 - 5;
               const leftX = -HOOP_W / 2;
               
+              // If stained, draw gooey green rims!
+              const rimColor = this.stained ? rgb(40, 180, 40) : rgb(...PAL.hoopRim);
+              
               drawRect({
                 width: HOOP_W,
                 height: 5,
                 pos: vec2(leftX, topY),
-                color: rgb(...PAL.hoopRim),
+                color: rimColor,
               });
               
               drawRect({
                 width: HOOP_W,
                 height: 5,
                 pos: vec2(leftX, bottomY),
-                color: rgb(...PAL.hoopRim),
+                color: rimColor,
               });
               
+              // If stained, draw splat green dots on the backboard!
+              if (this.stained) {
+                drawCircle({ pos: vec2(-12, -4), radius: 5, color: rgb(30, 140, 30), opacity: 0.75 });
+                drawCircle({ pos: vec2(10, 4), radius: 4, color: rgb(30, 140, 30), opacity: 0.75 });
+                drawCircle({ pos: vec2(2, -6), radius: 3, color: rgb(20, 100, 20), opacity: 0.8 });
+                drawCircle({ pos: vec2(-4, 6), radius: 6, color: rgb(40, 160, 40), opacity: 0.7 });
+              }
+
               // Hoop letter symbol
               drawText({
                 text: this.letter || "",
@@ -1741,7 +1871,7 @@
                 font: "monospace",
                 pos: vec2(0, -1),
                 anchor: "center",
-                color: rgb(255, 255, 255),
+                color: this.stained ? rgb(80, 160, 80) : rgb(255, 255, 255), // faded greenish letter
               });
             }
           }
@@ -2187,6 +2317,30 @@
 
         // Good items check scoring
         for (const h of hoops) {
+          if (h.stained) {
+            // Soap Ball cleans stained goal
+            if (ball.type === "soap") {
+              const dx = ball.pos.x - h.pos.x;
+              const dy = ball.pos.y - h.pos.y;
+              if (Math.abs(dx) < HOOP_W / 2 - 2 && Math.abs(dy) < HOOP_H / 2 + 3) {
+                h.stained = false;
+                
+                // Flex net, bubble sparks, sound
+                h.netRef.flexY = 24;
+                h.netRef.flexSpeed = 160;
+                sfx.playScore();
+                spawnBubbleSparks(h.pos.x, h.pos.y);
+                
+                // End flight
+                destroy(ball);
+                inFlight = false;
+                wait(0.6, loadRandomProjectile);
+                return;
+              }
+            }
+            continue; // Disabled from normal scoring!
+          }
+
           if (h.scored) continue;
           
           const dx = ball.pos.x - h.pos.x;
@@ -2207,9 +2361,10 @@
             sfx.playScore();
             spawnSparks(h.pos.x, h.pos.y);
 
-            // SPECIAL WATERMELON SPLAT GRAPHIC
+            // SPECIAL WATERMELON SPLAT GRAPHIC & STAIN HOOP
             if (ball.type === "watermelon") {
               spawnWatermelonSplat(h.pos.x, h.pos.y);
+              h.stained = true;
             }
 
             // CHECK CORRECT LETTER
@@ -2252,6 +2407,30 @@
                 this.pos.y += this.pvy * dt();
                 this.opacity = Math.max(0, 1 - this.life * 2.2);
                 if (this.life > 0.5) destroy(this);
+              }
+            }
+          ]);
+        }
+      }
+
+      function spawnBubbleSparks(cx, cy) {
+        for (let i = 0; i < 15; i++) {
+          const angle = rand(0, 360);
+          const speed = rand(40, 120);
+          const rad = rand(3, 8);
+          
+          add([
+            circle(rad),
+            pos(cx, cy),
+            color(150, 230, 255),
+            opacity(0.8),
+            z(5),
+            move(angle, speed),
+            lifespan(0.6, { fade: true }),
+            {
+              update() {
+                // Bubbles float upwards slightly
+                this.pos.y -= 30 * dt();
               }
             }
           ]);
@@ -2558,9 +2737,16 @@
         // Ensure shooting is upward direction
         if (vy < -60) {
           
-          // CRITICAL: ACCIDENTALLY SWING AND SHOOT A HAZARD => STRIKE PENALTY!
+          // CRITICAL: ACCIDENTALLY SWING AND SHOOT A HAZARD => PENALTY!
           if (!currentProjectileType.isGood) {
-            triggerStrike();
+            if (currentProjectileType.type === "mudpie") {
+              triggerMudSplatter();
+              dragCurrent = null;
+              kbPullLength = 0;
+              return; // Abort standard physics launch
+            } else {
+              triggerStrike();
+            }
           }
 
           levelShotsFired++;
@@ -2801,6 +2987,110 @@
       }
     });
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  MUD PIE SPLATTER INTERACTION
+    // ─────────────────────────────────────────────────────────────────────────
+    let mudWipeCount = 0;
+    let isMudWiping = false;
+    let mudWipeStartX = 0;
+    let mudWipeStartY = 0;
+
+    const mudSplash = document.getElementById("mud-splash");
+    const mudWipeRemaining = document.getElementById("mud-wipe-remaining");
+    const mudWipeProgressFill = document.getElementById("mud-wipe-progress-fill");
+
+    function triggerMudSplatter() {
+      isMenuPaused = true;
+      sfx.stopStretch();
+      if (ball) {
+        destroy(ball);
+        ball = null;
+      }
+      document.getElementById("btn-discard").classList.add("hidden");
+
+      // Show penalty container
+      penaltyOverlay.classList.remove("hidden");
+      mudSplash.classList.remove("hidden");
+      
+      // Force reflow and show
+      void mudSplash.offsetWidth;
+      mudSplash.classList.add("show");
+      
+      mudWipeCount = 0;
+      updateMudWipeUI();
+      
+      // Play low muddy splat sound
+      sfx.playBuzzer();
+    }
+
+    function updateMudWipeUI() {
+      const remaining = 3 - mudWipeCount;
+      mudWipeRemaining.innerText = remaining;
+      mudWipeProgressFill.style.width = `${(remaining / 3) * 100}%`;
+      mudSplash.style.background = `radial-gradient(circle, rgba(120, 80, 50, ${0.3 + remaining * 0.15}) 0%, rgba(60, 40, 25, ${0.4 + remaining * 0.15}) 100%)`;
+      mudSplash.style.backdropFilter = `blur(${remaining * 2}px)`;
+    }
+
+    function registerMudWipeAction() {
+      if (mudWipeCount >= 3) return;
+      
+      mudWipeCount++;
+      sfx.playWipe();
+      updateMudWipeUI();
+
+      // Screen brown flash effect
+      const flash = document.createElement("div");
+      flash.style.position = "absolute";
+      flash.style.top = "0";
+      flash.style.left = "0";
+      flash.style.width = "100%";
+      flash.style.height = "100%";
+      flash.style.background = "rgba(120, 80, 50, 0.4)";
+      flash.style.pointerEvents = "none";
+      flash.style.zIndex = "30";
+      penaltyOverlay.appendChild(flash);
+      setTimeout(() => flash.remove(), 100);
+
+      if (mudWipeCount >= 3) {
+        // Complete! Fade out mud and resume game
+        mudSplash.classList.remove("show");
+        setTimeout(() => {
+          penaltyOverlay.classList.add("hidden");
+          mudSplash.classList.add("hidden");
+          isMenuPaused = false;
+          document.getElementById("btn-discard").classList.remove("hidden");
+          
+          // Re-load next projectile!
+          loadRandomProjectile();
+        }, 400);
+      }
+    }
+
+    mudSplash.addEventListener("pointerdown", (e) => {
+      isMudWiping = true;
+      mudWipeStartX = e.clientX;
+      mudWipeStartY = e.clientY;
+    });
+
+    mudSplash.addEventListener("pointermove", (e) => {
+      if (!isMudWiping) return;
+      const dx = e.clientX - mudWipeStartX;
+      const dy = e.clientY - mudWipeStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist > 60) {
+        isMudWiping = false;
+        registerMudWipeAction();
+      }
+    });
+
+    mudSplash.addEventListener("pointerup", (e) => {
+      if (isMudWiping) {
+        isMudWiping = false;
+        registerMudWipeAction();
+      }
+    });
+
     // Discard loaded item logic
     function discardCurrentItem() {
       if (inFlight || isMenuPaused || screenStart.classList.contains("hidden") === false) return;
@@ -2891,8 +3181,10 @@
       // Clean up penalty overlays
       penaltyOverlay.classList.add("hidden");
       waterSplash.classList.add("hidden");
+      mudSplash.classList.add("hidden");
       bucketContainer.className = "";
       wipeCount = 0;
+      mudWipeCount = 0;
 
       completedWords = [];
       currentWord = "";
