@@ -36,29 +36,7 @@
       background: var(--bg-color);
       font-family: 'Outfit', sans-serif;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       touch-action: none;
-    }
-
-    /* Game Container limiting canvas to 480x720 centered */
-    #game-container {
-      width: 480px;
-      height: 720px;
-      position: relative;
-      background: #080816;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(60, 210, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    /* Absolute canvas */
-    #game-canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
     }
 
     /* CSS UI Overlays */
@@ -658,8 +636,6 @@
 </head>
 <body>
 
-  <div id="game-container">
-    
     <!-- Top HUD Overlays -->
     <div id="lvl-hud">
       Level <span id="lvl-num-text">1</span>: <span id="lvl-name-text">COLSON</span>
@@ -894,11 +870,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Kaboom canvas -->
-    <canvas id="game-canvas"></canvas>
-
-  </div>
 
   <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.js"></script>
   <script>
@@ -1184,8 +1155,7 @@
     window.addEventListener("touchstart", unlockSpeechAPI);
 
     // ── Kaboom canvas initialization ─────────────────────────────────────────
-    const canvas = document.getElementById("game-canvas");
-    kaboom({ canvas, width: 480, height: 720, background: [8, 8, 22] });
+    kaboom({ width: 480, height: 720, letterbox: true, background: [8, 8, 22] });
 
     // ── Color palette ─────────────────────────────────────────────────────────
     const PAL = {
