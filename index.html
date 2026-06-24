@@ -1186,6 +1186,8 @@
     // --- GLOBAL STATE ---
     // Single object holding all mutable runtime state for the current session.
     // ─────────────────────────────────────────────────────────────────────────
+    const savedEconomy = JSON.parse(localStorage.getItem("wacky_economy") || '{"coins":0,"unlockedPlayerSkins":["default"],"equippedPlayerSkin":"default","unlockedBallColors":["white"],"equippedBallColor":"white"}');
+
     const gameState = {
       currentLevelIndex:     0,    // Index into LEVELS[]
       totalGameScore:        0,    // Cumulative score (all levels)
@@ -1198,7 +1200,22 @@
       completedWords:        [],   // Words already spelled this level run
       currentLetterIndex:    0,    // Next required letter index into currentWord
       currentProjectileType: null, // Loaded PROJECTILES entry object
+      coins:                 savedEconomy.coins,
+      unlockedPlayerSkins:   savedEconomy.unlockedPlayerSkins,
+      equippedPlayerSkin:    savedEconomy.equippedPlayerSkin,
+      unlockedBallColors:    savedEconomy.unlockedBallColors,
+      equippedBallColor:     savedEconomy.equippedBallColor,
     };
+
+    function saveEconomy() {
+      localStorage.setItem("wacky_economy", JSON.stringify({
+        coins: gameState.coins,
+        unlockedPlayerSkins: gameState.unlockedPlayerSkins,
+        equippedPlayerSkin: gameState.equippedPlayerSkin,
+        unlockedBallColors: gameState.unlockedBallColors,
+        equippedBallColor: gameState.equippedBallColor
+      }));
+    }
 
     // Persisted high score
     let highScore = parseInt(localStorage.getItem("wacky_highscore") || "0");
@@ -1301,7 +1318,12 @@
     /** Pick a new random projectile (74% good / 26% hazard) and sync the discard button. */
     function loadRandomProjectile() {
       const isGood = rand(0, 1) < 0.74;
-      const list   = isGood ? PROJECTILES.good : PROJECTILES.hazard;
+      let list = isGood ? [...PROJECTILES.good] : PROJECTILES.hazard;
+      
+      if (isGood && gameState.equippedBallColor !== "white") {
+        list.push({ type: "cosmetic", name: "Custom Ball", isGood: true, mass: 0.6, bounce: 0.8 });
+      }
+
       gameState.currentProjectileType = list[Math.floor(rand(0, list.length))];
       const btn = document.getElementById("btn-discard");
       if (btn) btn.classList.toggle("pulse-alert", !gameState.currentProjectileType.isGood);
@@ -1387,6 +1409,15 @@
       drawCircle({ pos:pos.add(vec2(-2, 5)), radius:2, color:rgb(60,40,25), opacity:alpha });
     }
 
+    function drawCosmeticBall(pos, radius, alpha, colorName) {
+      let col = rgb(255,255,255);
+      if (colorName === "gold") col = rgb(255, 215, 0);
+      else if (colorName === "neon") col = rgb(0, 255, 255);
+      
+      drawCircle({ pos, radius, color: col, opacity: alpha, outline: { color: rgb(20, 20, 30), width: 1.5 } });
+      drawCircle({ pos: pos.add(vec2(-radius*0.3, -radius*0.3)), radius: radius*0.25, color: rgb(255,255,255), opacity: alpha*0.7 });
+    }
+
     /** Dispatch to the correct projectile renderer by type string. */
     function drawProjectile(type, pos, radius, alpha = 1.0) {
       if      (type === "watermelon") drawWatermelon(pos, radius, alpha);
@@ -1397,6 +1428,7 @@
       else if (type === "bowling")    drawBowling(pos, radius, alpha);
       else if (type === "anvil")      drawAnvil(pos, radius, alpha);
       else if (type === "mudpie")     drawMudPie(pos, radius, alpha);
+      else if (type === "cosmetic")   drawCosmeticBall(pos, radius, alpha, gameState.equippedBallColor);
     }
 
     /** Burst colourful confetti rectangles from an optional origin. */
@@ -1553,10 +1585,41 @@
       const config = LEVELS[gameState.currentLevelIndex];
 
       // ── HUD ──────────────────────────────────────────────────────────────
+      document.getElementById("lvl-hud").style.display = "block";
+      document.querySelector(".hud-controls").style.display = "flex";
       document.getElementById("lvl-num-text").innerText  = config.level;
       document.getElementById("lvl-name-text").innerText = config.name;
       document.getElementById("strike-hud").classList.remove("hidden");
       document.getElementById("btn-discard").classList.remove("hidden");
+
+      // Economy UI
+      const coinsHUD = add([
+        text(`Coins: ${gameState.coins}`, { size: 18, font: "monospace" }),
+        pos(W - 15, 20),
+        anchor("topright"),
+        color(255, 215, 0),
+        z(10),
+        "coinsHUD"
+      ]);
+
+      const btnShop = add([
+        rect(80, 30, { radius: 8 }),
+        pos(W - 55, 55),
+        anchor("center"),
+        color(50, 150, 50),
+        area({ cursor: "pointer" }),
+        z(10),
+        "btnShop"
+      ]);
+      btnShop.add([text("SHOP", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+      btnShop.onClick(() => { 
+        sfx.playClick();
+        document.getElementById("strike-hud").classList.add("hidden");
+        document.getElementById("btn-discard").classList.add("hidden");
+        document.getElementById("lvl-hud").style.display = "none";
+        document.querySelector(".hud-controls").style.display = "none";
+        go("shop"); 
+      });
 
       // ── Reset scene-level state ──────────────────────────────────────────
       dragging = false; dragStart = null; dragCurrent = null;
@@ -1614,6 +1677,13 @@
         ]);
 
         targetWordLabel.onClick(() => {
+          gameState.coins += 1;
+          saveEconomy();
+          const coinsHUD = get("coinsHUD")[0];
+          if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
+          const cf = add([text("+1", {size: 14, font: "monospace"}), pos(targetWordLabel.pos.x + 60, targetWordLabel.pos.y), color(255,215,0), z(5)]);
+          cf.onUpdate(() => { cf.pos.y -= 30 * dt(); cf.opacity -= dt() * 1.5; if(cf.opacity <= 0) destroy(cf); });
+
           speakWord(gameState.currentWord);
           targetWordLabel.scale = vec2(1.2);
           wait(0.1, () => { targetWordLabel.scale = vec2(1.0); });
@@ -1747,7 +1817,20 @@
         {
           blinkTimer:2.5, sadTimer:0, happyTimer:0, gaspTimer:0, lookDir:vec2(0),
           draw() {
-            drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(...PAL.batter),outline:{color:rgb(20,20,30),width:3}});
+            const skin = gameState.equippedPlayerSkin;
+            if (skin === "macaroni") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:24,anchor:"center",color:rgb(255,200,50),outline:{color:rgb(200,100,20),width:3}});
+            } else if (skin === "noodle") {
+              drawRect({width:BATTER_W-20,height:BATTER_H+30,radius:12,anchor:"center",color:rgb(255,50,150),outline:{color:rgb(150,20,80),width:3}});
+              drawLine({p1:vec2(-10, -BATTER_H/2), p2:vec2(10, -BATTER_H/2), width:3, color:rgb(150,20,80)});
+            } else if (skin === "ballplayer") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(240,180,140),outline:{color:rgb(20,20,30),width:3}});
+              drawRect({width:BATTER_W+14,height:10,radius:3,pos:vec2(0,-BATTER_H/2-4),anchor:"center",color:rgb(20,50,200)});
+              drawRect({width:BATTER_W,height:16,radius:8,pos:vec2(0,-BATTER_H/2-10),anchor:"center",color:rgb(20,50,200)});
+              drawText({text:"24",pos:vec2(0,-BATTER_H/2-12),size:14,font:"monospace",anchor:"center",color:rgb(255,255,255)});
+            } else {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(...PAL.batter),outline:{color:rgb(20,20,30),width:3}});
+            }
             const eL=vec2(-12,-8).add(this.lookDir), eR=vec2(12,-8).add(this.lookDir);
             if (this.sadTimer > 0) {
               drawLine({p1:eL.sub(vec2(4,4)), p2:eL.add(vec2(4,4)),  width:2.5,color:rgb(20,20,20)});
@@ -2260,6 +2343,75 @@
     btnWinMenu.addEventListener("click",()=>{sfx.playClick();resetStats();screenVictory.classList.add("hidden");screenStart.classList.remove("hidden");});
     btnRetryLevel.addEventListener("click",()=>{sfx.playClick();screenFail.classList.add("hidden");isMenuPaused=false;gameState.completedWords=[];gameState.currentWord="";go("game");});
     btnFailMenu.addEventListener("click",()=>{sfx.playClick();resetStats();screenFail.classList.add("hidden");screenStart.classList.remove("hidden");});
+
+    // ── Cosmetics Data ───────────────────────────────────────────────────
+    const SHOP_SKINS = [
+      { id: "default", name: "Default Boy", cost: 0 },
+      { id: "macaroni", name: "Macaroni", cost: 20 },
+      { id: "noodle", name: "Pool Noodle", cost: 30 },
+      { id: "ballplayer", name: "Ball Player", cost: 50 }
+    ];
+    
+    const SHOP_BALLS = [
+      { id: "white", name: "Standard", cost: 0 },
+      { id: "gold", name: "Gold Ball", cost: 10 },
+      { id: "neon", name: "Neon Blue", cost: 15 }
+    ];
+
+    // ── Shop Scene ───────────────────────────────────────────────────────
+    scene("shop", () => {
+      document.getElementById("lvl-hud").style.display = "none";
+      document.querySelector(".hud-controls").style.display = "none";
+      document.getElementById("strike-hud").classList.add("hidden");
+      document.getElementById("btn-discard").classList.add("hidden");
+
+      add([rect(W, H), color(15, 15, 30), z(0)]);
+
+      add([text("WACKY SHOP", { size: 36, font: "monospace" }), pos(W/2, 40), anchor("center"), color(100, 200, 255)]);
+      add([text(`Coins: ${gameState.coins}`, { size: 24, font: "monospace" }), pos(W/2, 80), anchor("center"), color(255, 215, 0)]);
+
+      const btnBack = add([rect(100, 40, { radius: 8 }), pos(W/2, H - 40), anchor("center"), color(200, 50, 50), area({cursor:"pointer"})]);
+      btnBack.add([text("BACK", { size: 18, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+      btnBack.onClick(() => { sfx.playClick(); go("game"); });
+
+      function createShopList(title, items, type, startY) {
+        add([text(title, { size: 20, font: "monospace" }), pos(W/2, startY), anchor("center"), color(255, 255, 255)]);
+        items.forEach((item, idx) => {
+          const y = startY + 40 + idx * 50;
+          const isOwned = type === "skin" ? gameState.unlockedPlayerSkins.includes(item.id) : gameState.unlockedBallColors.includes(item.id);
+          const isEquipped = type === "skin" ? gameState.equippedPlayerSkin === item.id : gameState.equippedBallColor === item.id;
+          
+          let btnColor = isEquipped ? rgb(50, 200, 50) : (isOwned ? rgb(100, 100, 200) : rgb(80, 80, 80));
+          let btnText = isEquipped ? "EQUIPPED" : (isOwned ? "EQUIP" : `${item.cost} Coins`);
+          
+          const row = add([rect(300, 40, { radius: 8 }), pos(W/2, y), anchor("center"), color(btnColor), area({cursor:"pointer"})]);
+          row.add([text(item.name, { size: 14, font: "monospace" }), pos(-140, 0), anchor("left"), color(255, 255, 255)]);
+          row.add([text(btnText, { size: 14, font: "monospace" }), pos(140, 0), anchor("right"), color(255, 255, 255)]);
+
+          row.onClick(() => {
+            if (isOwned) {
+              sfx.playClick();
+              if (type === "skin") gameState.equippedPlayerSkin = item.id;
+              else gameState.equippedBallColor = item.id;
+              saveEconomy(); go("shop");
+            } else if (gameState.coins >= item.cost) {
+              sfx.playClick();
+              gameState.coins -= item.cost;
+              if (type === "skin") { gameState.unlockedPlayerSkins.push(item.id); gameState.equippedPlayerSkin = item.id; }
+              else { gameState.unlockedBallColors.push(item.id); gameState.equippedBallColor = item.id; }
+              saveEconomy(); go("shop");
+            } else {
+              sfx.playBuzzer();
+              row.use(color(200, 50, 50));
+              wait(0.2, () => row.use(color(btnColor)));
+            }
+          });
+        });
+      }
+
+      createShopList("- Player Skins -", SHOP_SKINS, "skin", 140);
+      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 380);
+    });
 
     // Kick off the game
     go("game");
