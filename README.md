@@ -21,6 +21,7 @@ Wacky Ball is a premium, high-fidelity slingshot spelling arcade game built on t
 ## Interactive 3-Strikes Water Penalty Overlay 💦
 
 Rather than ending the game immediately, reaching **3 Strikes** triggers an interactive recovery minigame:
+
 1. A giant silhouette of a bucket grows in the center of the screen and tips over.
 2. The screen gets splashed with a full-screen, blurred blue radial gradient wet overlay.
 3. Realistic water droplets drip down the screen.
@@ -32,17 +33,20 @@ Rather than ending the game immediately, reaching **3 Strikes** triggers an inte
 ## Controls
 
 ### Mouse / Touch
+
 - **Drag & Release Batter**: Pull back the slingshot, aim with the projected dot path, and release to shoot.
 - **Click Batter or Discard Button**: Swap/recycle the currently loaded item (especially useful to discard heavy Hazards!).
 - **Click HUD buttons**: Toggle sound or pause the game.
 
 ### Keyboard
+
 - **Left / Right Arrow Keys**: Rotate the aiming angle.
 - **Spacebar (Hold & Release)**: Pull back the slingshot elastic and release to fire.
 - **Enter / Return**: Recycle/discard the loaded item.
 - **Escape**: Pause the game.
 
 ### Developer Cheat Codes 🛠️
+
 - **`c`**: Instantly light up the next spelling letter in the current word.
 - **`w`**: Instantly win the current level.
 - **`s`**: Instantly trigger the 3 Strikes Water Splash Penalty sequence.
@@ -52,6 +56,7 @@ Rather than ending the game immediately, reaching **3 Strikes** triggers an inte
 ## Getting Started (Local Development)
 
 To run the game locally:
+
 1. Ensure you have **Python 3** installed.
 2. Open a terminal in the project directory.
 3. Run the HTTP server:
