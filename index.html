@@ -1127,14 +1127,14 @@
     }
 
     // ── Speech Synthesis ─────────────────────────────────────────────────────
-    let speechUnlocked = false;
-
-    function initSpeech() {
-      if (speechUnlocked || !window.speechSynthesis) return;
+    function unlockSpeechAPI() {
+      if (!window.speechSynthesis) return;
       try {
-        const u = new SpeechSynthesisUtterance(""); u.volume = 0;
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
         window.speechSynthesis.speak(u);
-        speechUnlocked = true;
+        window.removeEventListener('touchstart', unlockSpeechAPI);
+        window.removeEventListener('click', unlockSpeechAPI);
       } catch (e) { console.warn("Speech unlock failed:", e); }
     }
 
@@ -1145,7 +1145,6 @@
         console.warn("TTS Aborted: No word provided or speechSynthesis unsupported.");
         return;
       }
-      initSpeech();
       try {
         console.log(`TTS: Canceling previous queue and preparing to speak: "${word}"`);
         window.speechSynthesis.cancel();
@@ -1181,8 +1180,8 @@
     const sfx = new SoundSynth();
     window.addEventListener("click",      () => sfx.init());
     window.addEventListener("touchstart", () => sfx.init());
-    window.addEventListener("click",      initSpeech, { once: true });
-    window.addEventListener("touchstart", initSpeech, { once: true });
+    window.addEventListener("click",      unlockSpeechAPI);
+    window.addEventListener("touchstart", unlockSpeechAPI);
 
     // ── Kaboom canvas initialization ─────────────────────────────────────────
     const canvas = document.getElementById("game-canvas");
@@ -2226,7 +2225,7 @@
         const card=document.createElement("div");
         card.className=`lvl-card ${index===gameState.currentLevelIndex?"active":""}`;
         card.innerHTML=`<div class="lvl-card-num">Level ${lvlNum}</div><div class="lvl-card-word">${(LEVEL_WORDS[lvlNum]||[]).join(", ")}</div><div class="lvl-card-desc">${lvl.desc}</div>`;
-        card.addEventListener("click",()=>{sfx.playClick();initSpeech();gameState.currentLevelIndex=index;populateLevelGrid();startGameFromMenu();});
+        card.addEventListener("click",()=>{sfx.playClick();gameState.currentLevelIndex=index;populateLevelGrid();startGameFromMenu();});
         lvlGridContainer.appendChild(card);
       });
     }
@@ -2271,7 +2270,7 @@
       else{screenPause.classList.add("hidden");btnHUDDiscard.classList.remove("hidden");}
     }
 
-    btnPlayGame.addEventListener("click",()=>{sfx.playClick();initSpeech();startGameFromMenu();});
+    btnPlayGame.addEventListener("click",()=>{sfx.playClick();startGameFromMenu();});
     btnShowLvlSelect.addEventListener("click",()=>{sfx.playClick();populateLevelGrid();screenStart.classList.add("hidden");screenLvlSelect.classList.remove("hidden");});
     btnBackLvlSelect.addEventListener("click",()=>{sfx.playClick();screenLvlSelect.classList.add("hidden");screenStart.classList.remove("hidden");});
     btnHUDPause.addEventListener("click",()=>{sfx.playClick();triggerPause();});
