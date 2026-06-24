@@ -2020,70 +2020,7 @@
       }
     }
 
-    btnHUDPause.addEventListener("click",()=>{sfx.playClick();triggerPause();});
     window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
-    btnHUDDiscard.addEventListener("click",()=>{discardCurrentItem();});
-    btnHUDSound.addEventListener("click",()=>{sfx.toggleMute();});
-
-    
-    
-
-    function showLevelUpOverlay() {
-      const lc=LEVELS[gameState.currentLevelIndex];
-      
-      
-      
-      
-      
-      screenLevelUp.classList.remove("hidden");
-    }
-
-    function showVictoryOverlay() {
-      isMenuPaused=true;
-      
-      
-      const acc=gameState.totalShotsFired>0?Math.round((gameState.totalBasketsScored/gameState.totalShotsFired)*100):0;
-      
-      screenVictory.classList.remove("hidden");
-    }
-
-    function showFailOverlay() {
-      
-      
-      screenFail.classList.remove("hidden");
-    }
-
-    function triggerPause() {
-      if (!screenStart.classList.contains("hidden"))     return;
-      if (!screenLvlSelect.classList.contains("hidden")) return;
-      if (!screenLevelUp.classList.contains("hidden"))   return;
-      if (!screenVictory.classList.contains("hidden"))   return;
-      if (!screenFail.classList.contains("hidden"))      return;
-      isMenuPaused=!isMenuPaused;
-      if(isMenuPaused){screenPause.classList.remove("hidden");sfx.stopStretch();btnHUDDiscard.classList.add("hidden");}
-      else{screenPause.classList.add("hidden");btnHUDDiscard.classList.remove("hidden");}
-    }
-
-    btnPlayGame.addEventListener("click",()=>{sfx.playClick();startGameFromMenu();});
-    btnShowLvlSelect.addEventListener("click",()=>{sfx.playClick();screenStart.classList.add("hidden");screenLvlSelect.classList.remove("hidden");});
-    btnBackLvlSelect.addEventListener("click",()=>{sfx.playClick();screenLvlSelect.classList.add("hidden");screenStart.classList.remove("hidden");});
-    btnHUDPause.addEventListener("click",()=>{sfx.playClick();triggerPause();});
-    window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
-    btnResumeGame.addEventListener("click",()=>{sfx.playClick();isMenuPaused=false;screenPause.classList.add("hidden");btnHUDDiscard.classList.remove("hidden");});
-    btnRestartLevel.addEventListener("click",()=>{sfx.playClick();isMenuPaused=false;gameState.completedWords=[];gameState.currentWord="";screenPause.classList.add("hidden");go("game");});
-    btnQuitGame.addEventListener("click",()=>{sfx.playClick();isMenuPaused=true;screenPause.classList.add("hidden");null.classList.add("hidden");btnHUDDiscard.classList.add("hidden");screenStart.classList.remove("hidden");});
-    btnHUDDiscard.addEventListener("click",()=>{discardCurrentItem();});
-    btnHUDSound.addEventListener("click",()=>{sfx.toggleMute();});
-    btnNextLevel.addEventListener("click",()=>{
-      sfx.playClick(); screenLevelUp.classList.add("hidden");
-      gameState.currentLevelIndex++;
-      if(gameState.currentLevelIndex<LEVELS.length){isMenuPaused=false;gameState.completedWords=[];gameState.currentWord="";go("game");}
-      else showVictoryOverlay();
-    });
-    btnWinReplay.addEventListener("click",()=>{sfx.playClick();resetStats();startGameFromMenu();});
-    btnWinMenu.addEventListener("click",()=>{sfx.playClick();resetStats();screenVictory.classList.add("hidden");screenStart.classList.remove("hidden");});
-    btnRetryLevel.addEventListener("click",()=>{sfx.playClick();screenFail.classList.add("hidden");isMenuPaused=false;gameState.completedWords=[];gameState.currentWord="";go("game");});
-    btnFailMenu.addEventListener("click",()=>{sfx.playClick();resetStats();screenFail.classList.add("hidden");screenStart.classList.remove("hidden");});
 
     // ── Cosmetics Data ───────────────────────────────────────────────────
     const SHOP_SKINS = [
