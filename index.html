@@ -1502,8 +1502,11 @@
     // ── Mud penalty ───────────────────────────────────────────────────────────
 
     function triggerMudSplatter() {
+      if (!inFlight) return;
+      if (ball && ball.hasStruck) return;
+      if (ball) ball.hasStruck = true;
+
       isMenuPaused = true; sfx.stopStretch();
-      if (ball) { destroy(ball); ball = null; }
       document.getElementById("btn-discard").classList.add("hidden");
       penaltyOverlay.classList.remove("hidden");
       mudSplash.classList.remove("hidden");
@@ -1969,14 +1972,16 @@
       }
 
       function triggerWordWin() {
-        gameState.completedWords.push(gameState.currentWord);
-        sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
+      gameState.completedWords.push(gameState.currentWord);
+      speakWord(gameState.currentWord);
+      sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
         add([text(`"${gameState.currentWord}" Spelled!`,{size:20,font:"monospace"}),pos(W/2,H/2),anchor("center"),color(255,210,60),z(10),lifespan(1.5)]);
         wait(1.5, () => { const nw=selectRandomWord(); if(nw) buildLetterBubbles(); });
       }
 
       function triggerLevelWin() {
-        isMenuPaused=true; sfx.playWin();
+      speakWord(gameState.currentWord);
+      isMenuPaused=true; sfx.playWin();
         document.getElementById("btn-discard").classList.add("hidden");
         if (ball) { destroy(ball); ball=null; }
         addConfetti({pos:vec2(W/2,H/3)}); addConfetti({pos:vec2(W/4,H/3)}); addConfetti({pos:vec2(3*W/4,H/3)});
@@ -1991,7 +1996,11 @@
       }
 
       function triggerStrike() {
-        gameState.strikes++; updateStrikesHUD(); sfx.playBuzzer(); shake(18);
+      if (!inFlight) return;
+      if (ball && ball.hasStruck) return;
+      if (ball) ball.hasStruck = true;
+
+      gameState.strikes++; updateStrikesHUD(); sfx.playBuzzer(); shake(18);
         batter.sadTimer=1.5;
         const alertEl=document.getElementById("strike-alert");
         alertEl.classList.remove("hidden"); setTimeout(()=>alertEl.classList.add("hidden"),1000);
@@ -2050,6 +2059,7 @@
       }
 
       onCollide("ball","trashcan",(b,trash)=>{
+        if (!inFlight) return;
         if (!b.isGood) {
           sfx.playScore(); gameState.totalGameScore+=50;
           spawnTrashSuccessSparks(trash.pos.x,trash.pos.y);
