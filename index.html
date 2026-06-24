@@ -1138,21 +1138,43 @@
       } catch (e) { console.warn("Speech unlock failed:", e); }
     }
 
+    let currentUtterance = null; // Prevent GC of utterance
+
     function speakWord(word) {
-      if (!word || !window.speechSynthesis) return;
+      if (!word || !window.speechSynthesis) {
+        console.warn("TTS Aborted: No word provided or speechSynthesis unsupported.");
+        return;
+      }
       initSpeech();
       try {
+        console.log(`TTS: Canceling previous queue and preparing to speak: "${word}"`);
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(`Spell the word: ${word}`);
-        utterance.rate  = 0.85; // kid-friendly speed
+        
+        currentUtterance = new SpeechSynthesisUtterance(`Spell the word: ${word}`);
+        currentUtterance.rate  = 0.85; // kid-friendly speed
+        
         if (window.speechSynthesis.getVoices) {
           const voices  = window.speechSynthesis.getVoices();
           const enVoice = voices.find(v => v.lang.startsWith("en") && v.localService) ||
                           voices.find(v => v.lang.startsWith("en"));
-          if (enVoice) utterance.voice = enVoice;
+          if (enVoice) currentUtterance.voice = enVoice;
         }
-        window.speechSynthesis.speak(utterance);
-      } catch (e) { console.warn("Speech speak failed:", e); }
+
+        currentUtterance.onstart = (e) => {
+          console.log(`TTS Event: [onstart] successfully started speaking "${word}"`);
+        };
+        currentUtterance.onend = (e) => {
+          console.log(`TTS Event: [onend] finished speaking "${word}" after ${e.elapsedTime}ms`);
+        };
+        currentUtterance.onerror = (e) => {
+          console.error(`TTS Event: [onerror] failed to speak "${word}". Error: ${e.error}`);
+        };
+
+        window.speechSynthesis.speak(currentUtterance);
+        console.log(`TTS: Added utterance to synthesis queue.`);
+      } catch (e) { 
+        console.error("Speech speak function crashed:", e); 
+      }
     }
 
     // ── Bootstrap audio & speech on first user gesture ───────────────────────
@@ -1608,21 +1630,25 @@
        */
       function buildLetterBubbles() {
         if (targetWordLabel) destroy(targetWordLabel);
-        if (speakerBtn)      destroy(speakerBtn);
-        if (speakerBg)       destroy(speakerBg);
         letterBubbles.forEach(b => { destroy(b.bg); destroy(b.txt); destroy(b.outlineCircle); });
         letterBubbles = [];
         gameState.currentLetterIndex = 0;
 
         // Target word label
-        targetWordLabel = add([text("Target: "+gameState.currentWord,{size:10,font:"monospace"}), pos(W/2,40), anchor("center"), color(140,140,160), z(3)]);
+        targetWordLabel = add([
+          text("Target: "+gameState.currentWord,{size:10,font:"monospace"}),
+          pos(W/2,40),
+          anchor("center"),
+          color(140,140,160),
+          area({cursor:"pointer"}),
+          z(3)
+        ]);
 
-        // Speaker icon
-        const labelText = "Target: "+gameState.currentWord;
-        const speakerX  = W/2 + (labelText.length*6)/2 + 14;
-        speakerBg  = add([circle(10), pos(speakerX,40), color(40,40,75), opacity(0.3), z(2)]);
-        speakerBtn = add([text("🔊",{size:12,font:"sans-serif"}), pos(speakerX,40), anchor("center"), area({cursor:"pointer"}), z(3), "speaker"]);
-        speakerBtn.onClick(() => { speakWord(gameState.currentWord); speakerBtn.scale=vec2(1.2); wait(0.1,()=>{speakerBtn.scale=vec2(1.0);}); });
+        targetWordLabel.onClick(() => {
+          speakWord(gameState.currentWord);
+          targetWordLabel.scale = vec2(1.2);
+          wait(0.1, () => { targetWordLabel.scale = vec2(1.0); });
+        });
 
         // Letter bubbles row
         const wordArr = gameState.currentWord.split("");
