@@ -1285,7 +1285,7 @@
       const available = words.filter(w => !gameState.completedWords.includes(w));
       if (available.length === 0) { triggerLevelWin(); return null; }
       gameState.currentWord = available[Math.floor(rand(0, available.length))];
-      speakWord(gameState.currentWord);
+      // Autoplay speech removed; user taps speaker icon to hear.
       return gameState.currentWord;
     }
 
@@ -1972,15 +1972,24 @@
       }
 
       function triggerWordWin() {
-      gameState.completedWords.push(gameState.currentWord);
-      speakWord(gameState.currentWord);
-      sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
-        add([text(`"${gameState.currentWord}" Spelled!`,{size:20,font:"monospace"}),pos(W/2,H/2),anchor("center"),color(255,210,60),z(10),lifespan(1.5)]);
-        wait(1.5, () => { const nw=selectRandomWord(); if(nw) buildLetterBubbles(); });
+        gameState.completedWords.push(gameState.currentWord);
+        sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
+        isMenuPaused = true;
+
+        const winUI = add([ pos(W/2, H/2), z(10), "winUI" ]);
+        winUI.add([text("Level Complete", {size:24, font:"monospace"}), anchor("center"), color(255,210,60), pos(0,-20)]);
+        winUI.add([text("Tap to Continue", {size:16, font:"monospace"}), anchor("center"), color(100,255,100), pos(0,20)]);
+
+        const tapArea = add([rect(W, H), pos(0,0), opacity(0), area(), z(9), "winUI"]);
+        tapArea.onClick(() => {
+          speakWord(gameState.currentWord);
+          destroyAll("winUI");
+          isMenuPaused = false;
+          const nw=selectRandomWord(); if(nw) buildLetterBubbles();
+        });
       }
 
       function triggerLevelWin() {
-      speakWord(gameState.currentWord);
       isMenuPaused=true; sfx.playWin();
         document.getElementById("btn-discard").classList.add("hidden");
         if (ball) { destroy(ball); ball=null; }
