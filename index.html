@@ -645,6 +645,7 @@
       if (ball) { destroy(ball); ball = null; }
       sfx.playBuzzer();
       
+      const bg = add([rect(W, H), color(0, 50, 150), opacity(0.85), z(99), "penalty_overlay"]);
       const overlay = add([
         sprite("water splash"),
         pos(W/2, H/2),
@@ -687,6 +688,7 @@
       isMenuPaused = true; sfx.stopStretch();
       sfx.playBuzzer();
       
+      const bg = add([rect(W, H), color(60, 40, 20), opacity(0.95), z(99), "penalty_overlay"]);
       const overlay = add([
         sprite("mud splash"),
         pos(W/2, H/2),
@@ -1202,10 +1204,13 @@
 
         const tapArea = add([rect(W, H), pos(0,0), opacity(0), area(), z(9), "winUI"]);
         tapArea.onClick(() => {
-          speakWord(gameState.currentWord);
           destroyAll("winUI");
           isMenuPaused = false;
-          const nw=selectRandomWord(); if(nw) buildLetterBubbles();
+          const nw=selectRandomWord(); 
+          if(nw) {
+            buildLetterBubbles();
+            speakWord(gameState.currentWord); // Announce the NEW word!
+          }
         });
       }
 
