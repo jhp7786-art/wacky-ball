@@ -1635,8 +1635,6 @@
         assignHoopLetters();
       }
 
-      buildLetterBubbles();
-
       // ── Hoops & nets ─────────────────────────────────────────────────────
       const HOOP_COLS    = 4;
       const HOOP_SPACING = W / (HOOP_COLS + 1);
@@ -1706,6 +1704,8 @@
 
         hoops.push(hoop); netObjects.push(net);
       }
+
+      buildLetterBubbles();
 
       // ── Trash Can ────────────────────────────────────────────────────────
       const trashCan = add([
