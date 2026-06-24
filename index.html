@@ -636,94 +636,6 @@
 </head>
 <body>
 
-    <!-- Top HUD Overlays -->
-    <div id="lvl-hud">
-      Level <span id="lvl-num-text">1</span>: <span id="lvl-name-text">COLSON</span>
-    </div>
-
-    <!-- Strike Status HUD -->
-    <div id="strike-hud" class="hidden">
-      <span class="strike-x" id="strike-1">X</span>
-      <span class="strike-x" id="strike-2">X</span>
-      <span class="strike-x" id="strike-3">X</span>
-    </div>
-
-    <div class="hud-controls">
-      <button class="hud-btn" id="btn-sound" title="Toggle Sound">
-        <!-- Sound Icon (On) -->
-        <svg id="svg-sound-on" viewBox="0 0 24 24">
-          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-        </svg>
-        <!-- Sound Icon (Muted) -->
-        <svg id="svg-sound-off" viewBox="0 0 24 24" style="display:none;">
-          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-        </svg>
-      </button>
-      <button class="hud-btn" id="btn-pause" title="Pause Game">
-        <svg viewBox="0 0 24 24">
-          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- Discard current projectile button (Recycle swap) -->
-    <button id="btn-discard" class="hidden" title="Discard Current Item (Clicks Batter too)">
-      <svg viewBox="0 0 24 24">
-        <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
-      </svg>
-    </button>
-
-    <!-- Strike Splash Alert Overlay -->
-    <div id="strike-alert" class="hidden" style="position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%); color: #ff5050; font-family: 'Fredoka', sans-serif; font-size: 52px; font-weight: 800; text-shadow: 0 0 25px rgba(255, 80, 80, 0.9); z-index: 15; pointer-events: none; transition: opacity 0.15s;">
-      STRIKE!
-    </div>
-
-    <!-- Penalty Splash & Wipe Overlay -->
-    <div id="penalty-overlay" class="hidden">
-      <!-- Giant bucket shadow silhouette -->
-      <div id="bucket-shadow-container">
-        <svg id="bucket-svg" viewBox="0 0 100 100">
-          <path d="M20 40 C20 15, 80 15, 80 40" stroke="rgba(255, 255, 255, 0.2)" stroke-width="5" fill="none" stroke-linecap="round"/>
-          <path d="M25 40 L32 85 C33 90, 67 90, 68 85 L75 40 Z" fill="rgba(10, 10, 20, 0.85)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3" stroke-linejoin="round"/>
-          <ellipse cx="50" cy="40" rx="25" ry="6" fill="rgba(20, 20, 35, 0.9)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2"/>
-        </svg>
-      </div>
-
-      <!-- Water splash overlay -->
-      <div id="water-splash" class="hidden">
-        <!-- Dripping droplets styling -->
-        <div class="water-drip drip-1"></div>
-        <div class="water-drip drip-2"></div>
-        <div class="water-drip drip-3"></div>
-        <div class="water-drip drip-4"></div>
-        <div class="water-drip drip-5"></div>
-        <div class="wipe-instruction">
-          <span class="wipe-icon">💦</span>
-          <h2>SCREEN IS WET!</h2>
-          <p>Tap or Swipe <span id="wipe-remaining">3</span> times to wipe it away!</p>
-          <div class="wipe-progress-bar"><div id="wipe-progress-fill"></div></div>
-        </div>
-      </div>
-
-      <!-- Mud splash overlay -->
-      <div id="mud-splash" class="hidden">
-        <!-- Dripping mud drops -->
-        <div class="mud-drip drip-1" style="width: 14px; height: 50px; background: rgba(90, 60, 35, 0.95);"></div>
-        <div class="mud-drip drip-2" style="width: 10px; height: 70px; background: rgba(80, 55, 30, 0.9);"></div>
-        <div class="mud-drip drip-3" style="width: 16px; height: 45px; background: rgba(95, 65, 38, 0.95);"></div>
-        <div class="mud-drip drip-4" style="width: 12px; height: 60px; background: rgba(70, 45, 25, 0.98);"></div>
-        <div class="mud-drip drip-5" style="width: 15px; height: 55px; background: rgba(85, 55, 30, 0.92);"></div>
-        <div class="mud-instruction">
-          <span class="wipe-icon">🟤</span>
-          <h2 style="color: #ffaa44; font-family: 'Fredoka', sans-serif; font-size: 26px; margin: 12px 0 6px; font-weight: 700; text-shadow: 0 0 10px rgba(208, 128, 48, 0.5);">SCREEN IS MUDDY!</h2>
-          <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 16px;">Tap or Swipe <span id="mud-wipe-remaining" style="color: #ffaa44; font-weight: 800; font-size: 18px;">3</span> times to clean it!</p>
-          <div class="wipe-progress-bar" style="background: rgba(255, 255, 255, 0.1);"><div id="mud-wipe-progress-fill" style="width: 100%; height: 100%; background: linear-gradient(90deg, #ffaa44, #d08030); transition: width 0.3s ease; border-radius: 4px;"></div></div>
-        </div>
-      </div>
-    </div>
-
-
-
   <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.js"></script>
   <script>
     // ─────────────────────────────────────────────────────────────────────────
@@ -748,8 +660,8 @@
 
       toggleMute() {
         this.muted = !this.muted;
-        document.getElementById("svg-sound-on").style.display = this.muted ? "none" : "block";
-        document.getElementById("svg-sound-off").style.display = this.muted ? "block" : "none";
+        
+        
         if (this.muted) this.stopStretch();
         return this.muted;
       }
@@ -1008,7 +920,7 @@
     window.addEventListener("touchstart", unlockSpeechAPI);
 
     // ── Kaboom canvas initialization ─────────────────────────────────────────
-    kaboom({ width: 480, height: 720, letterbox: true, background: [8, 8, 22] });
+    kaboom({ fullscreen: true, scale: 1, background: [8, 8, 22] });
 
     // ── Color palette ─────────────────────────────────────────────────────────
     const PAL = {
@@ -1198,14 +1110,12 @@
       }
 
       gameState.currentProjectileType = list[Math.floor(rand(0, list.length))];
-      const btn = document.getElementById("btn-discard");
       if (btn) btn.classList.toggle("pulse-alert", !gameState.currentProjectileType.isGood);
     }
 
     /** Sync the three strike HUD markers to gameState.strikes. */
     function updateStrikesHUD() {
       for (let i = 1; i <= 3; i++) {
-        const marker = document.getElementById(`strike-${i}`);
         if (marker) marker.classList.toggle("active", i <= gameState.strikes);
       }
     }
@@ -1332,14 +1242,6 @@
     // ─────────────────────────────────────────────────────────────────────────
 
     // DOM refs for penalty overlays
-    const penaltyOverlay      = document.getElementById("penalty-overlay");
-    const bucketContainer     = document.getElementById("bucket-shadow-container");
-    const waterSplash         = document.getElementById("water-splash");
-    const wipeRemaining       = document.getElementById("wipe-remaining");
-    const wipeProgressFill    = document.getElementById("wipe-progress-fill");
-    const mudSplash           = document.getElementById("mud-splash");
-    const mudWipeRemaining    = document.getElementById("mud-wipe-remaining");
-    const mudWipeProgressFill = document.getElementById("mud-wipe-progress-fill");
 
     // Swipe gesture state for both overlays
     let wipeCount = 0, isWiping = false, wipeStartX = 0, wipeStartY = 0;
@@ -1350,7 +1252,7 @@
     function triggerThreeStrikesPenalty() {
       isMenuPaused = true; sfx.stopStretch();
       if (ball) { destroy(ball); ball = null; }
-      document.getElementById("btn-discard").classList.add("hidden");
+      null.classList.add("hidden");
       penaltyOverlay.classList.remove("hidden");
       bucketContainer.className = "";
       void bucketContainer.offsetWidth;
@@ -1386,7 +1288,7 @@
           penaltyOverlay.classList.add("hidden"); waterSplash.classList.add("hidden");
           bucketContainer.className = "";
           gameState.strikes = 0; updateStrikesHUD();
-          isMenuPaused = false; document.getElementById("btn-discard").classList.remove("hidden");
+          isMenuPaused = false; null.classList.remove("hidden");
         }, 400);
       }
     }
@@ -1403,7 +1305,7 @@
       if (ball) ball.hasStruck = true;
 
       isMenuPaused = true; sfx.stopStretch();
-      document.getElementById("btn-discard").classList.add("hidden");
+      null.classList.add("hidden");
       penaltyOverlay.classList.remove("hidden");
       mudSplash.classList.remove("hidden");
       void mudSplash.offsetWidth;
@@ -1429,7 +1331,7 @@
         mudSplash.classList.remove("show");
         setTimeout(() => {
           penaltyOverlay.classList.add("hidden"); mudSplash.classList.add("hidden");
-          isMenuPaused = false; document.getElementById("btn-discard").classList.remove("hidden");
+          isMenuPaused = false; null.classList.remove("hidden");
           loadRandomProjectile();
         }, 400);
       }
@@ -1458,12 +1360,12 @@
       const config = LEVELS[gameState.currentLevelIndex];
 
       // ── HUD ──────────────────────────────────────────────────────────────
-      document.getElementById("lvl-hud").style.display = "block";
-      document.querySelector(".hud-controls").style.display = "flex";
-      document.getElementById("lvl-num-text").innerText  = config.level;
-      document.getElementById("lvl-name-text").innerText = config.name;
-      document.getElementById("strike-hud").classList.remove("hidden");
-      document.getElementById("btn-discard").classList.remove("hidden");
+      
+      
+      
+      
+      null.classList.remove("hidden");
+      null.classList.remove("hidden");
 
       // Economy UI
       const coinsHUD = add([
@@ -1487,10 +1389,10 @@
       btnShop.add([text("SHOP", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
       btnShop.onClick(() => { 
         sfx.playClick();
-        document.getElementById("strike-hud").classList.add("hidden");
-        document.getElementById("btn-discard").classList.add("hidden");
-        document.getElementById("lvl-hud").style.display = "none";
-        document.querySelector(".hud-controls").style.display = "none";
+        null.classList.add("hidden");
+        null.classList.add("hidden");
+        
+        
         go("shop"); 
       });
 
@@ -1942,14 +1844,14 @@
 
       function triggerLevelWin() {
       isMenuPaused=true; sfx.playWin();
-        document.getElementById("btn-discard").classList.add("hidden");
+        null.classList.add("hidden");
         if (ball) { destroy(ball); ball=null; }
         addConfetti({pos:vec2(W/2,H/3)}); addConfetti({pos:vec2(W/4,H/3)}); addConfetti({pos:vec2(3*W/4,H/3)});
         wait(1.5, () => {
           if (gameState.totalGameScore>highScore) {
             highScore=gameState.totalGameScore;
             localStorage.setItem("wacky_highscore",highScore.toString());
-            document.getElementById("start-highscore-badge").innerText=`High Score: ${highScore}`;
+            
           }
           showLevelUpOverlay();
         });
@@ -1962,11 +1864,10 @@
 
       gameState.strikes++; updateStrikesHUD(); sfx.playBuzzer(); shake(18);
         batter.sadTimer=1.5;
-        const alertEl=document.getElementById("strike-alert");
         alertEl.classList.remove("hidden"); setTimeout(()=>alertEl.classList.add("hidden"),1000);
         if (gameState.strikes>=3) {
           isMenuPaused=true; sfx.stopStretch();
-          document.getElementById("btn-discard").classList.add("hidden");
+          null.classList.add("hidden");
           wait(1.2, ()=>{ if(ball){destroy(ball);ball=null;} triggerThreeStrikesPenalty(); });
         }
       }
@@ -2102,10 +2003,6 @@
 
     }); // end scene("game")
 
-    const btnHUDPause      = document.getElementById("btn-pause");
-    const btnHUDSound      = document.getElementById("btn-sound");
-    const btnHUDDiscard    = document.getElementById("btn-discard");
-
     function resetStats() {
       gameState.currentLevelIndex=0; gameState.totalGameScore=0; gameState.totalShotsFired=0;
       gameState.totalBasketsScored=0; gameState.levelShotsFired=0; gameState.levelBasketsScored=0;
@@ -2149,45 +2046,33 @@
     btnHUDDiscard.addEventListener("click",()=>{discardCurrentItem();});
     btnHUDSound.addEventListener("click",()=>{sfx.toggleMute();});
 
-    function populateLevelGrid() {
-      lvlGridContainer.innerHTML="";
-      Object.keys(LEVEL_WORDS).forEach((lvlKey)=>{
-        const lvlNum=parseInt(lvlKey), index=lvlNum-1;
-        const lvl=LEVELS[index]||{level:lvlNum,name:`Level ${lvlNum}`,desc:"Dynamic spelling level challenges!"};
-        const card=document.createElement("div");
-        card.className=`lvl-card ${index===gameState.currentLevelIndex?"active":""}`;
-        card.innerHTML=`<div class="lvl-card-num">Level ${lvlNum}</div><div class="lvl-card-word">${(LEVEL_WORDS[lvlNum]||[]).join(", ")}</div><div class="lvl-card-desc">${lvl.desc}</div>`;
-        card.addEventListener("click",()=>{sfx.playClick();gameState.currentLevelIndex=index;populateLevelGrid();startGameFromMenu();});
-        lvlGridContainer.appendChild(card);
-      });
-    }
-
-    populateLevelGrid();
+    
+    
 
     function showLevelUpOverlay() {
       const lc=LEVELS[gameState.currentLevelIndex];
-      document.getElementById("strike-hud").classList.add("hidden");
-      document.getElementById("lvlup-subtitle").innerText=`Complete: ${lc.name}`;
-      document.getElementById("lvlup-stat-word").innerText=gameState.completedWords.join(", ");
-      document.getElementById("lvlup-stat-shots").innerText=gameState.levelShotsFired;
-      document.getElementById("lvlup-stat-baskets").innerText=gameState.levelBasketsScored;
-      document.getElementById("lvlup-stat-score").innerText=`+${gameState.levelBasketsScored*25}`;
+      null.classList.add("hidden");
+      
+      
+      
+      
+      
       screenLevelUp.classList.remove("hidden");
     }
 
     function showVictoryOverlay() {
-      isMenuPaused=true; document.getElementById("strike-hud").classList.add("hidden");
-      document.getElementById("win-stat-score").innerText=gameState.totalGameScore;
-      document.getElementById("win-stat-shots").innerText=gameState.totalShotsFired;
+      isMenuPaused=true; null.classList.add("hidden");
+      
+      
       const acc=gameState.totalShotsFired>0?Math.round((gameState.totalBasketsScored/gameState.totalShotsFired)*100):0;
-      document.getElementById("win-stat-accuracy").innerText=`${acc}%`;
+      
       screenVictory.classList.remove("hidden");
     }
 
     function showFailOverlay() {
-      document.getElementById("strike-hud").classList.add("hidden");
-      document.getElementById("fail-stat-word").innerText=gameState.currentWord;
-      document.getElementById("fail-stat-letters").innerText=`${gameState.currentLetterIndex} / ${gameState.currentWord.length}`;
+      null.classList.add("hidden");
+      
+      
       screenFail.classList.remove("hidden");
     }
 
@@ -2203,13 +2088,13 @@
     }
 
     btnPlayGame.addEventListener("click",()=>{sfx.playClick();startGameFromMenu();});
-    btnShowLvlSelect.addEventListener("click",()=>{sfx.playClick();populateLevelGrid();screenStart.classList.add("hidden");screenLvlSelect.classList.remove("hidden");});
+    btnShowLvlSelect.addEventListener("click",()=>{sfx.playClick();screenStart.classList.add("hidden");screenLvlSelect.classList.remove("hidden");});
     btnBackLvlSelect.addEventListener("click",()=>{sfx.playClick();screenLvlSelect.classList.add("hidden");screenStart.classList.remove("hidden");});
     btnHUDPause.addEventListener("click",()=>{sfx.playClick();triggerPause();});
     window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
     btnResumeGame.addEventListener("click",()=>{sfx.playClick();isMenuPaused=false;screenPause.classList.add("hidden");btnHUDDiscard.classList.remove("hidden");});
     btnRestartLevel.addEventListener("click",()=>{sfx.playClick();isMenuPaused=false;gameState.completedWords=[];gameState.currentWord="";screenPause.classList.add("hidden");go("game");});
-    btnQuitGame.addEventListener("click",()=>{sfx.playClick();isMenuPaused=true;screenPause.classList.add("hidden");document.getElementById("strike-hud").classList.add("hidden");btnHUDDiscard.classList.add("hidden");screenStart.classList.remove("hidden");});
+    btnQuitGame.addEventListener("click",()=>{sfx.playClick();isMenuPaused=true;screenPause.classList.add("hidden");null.classList.add("hidden");btnHUDDiscard.classList.add("hidden");screenStart.classList.remove("hidden");});
     btnHUDDiscard.addEventListener("click",()=>{discardCurrentItem();});
     btnHUDSound.addEventListener("click",()=>{sfx.toggleMute();});
     btnNextLevel.addEventListener("click",()=>{
@@ -2239,10 +2124,10 @@
 
     // ── Main Menu Scene ──────────────────────────────────────────────────
     scene("menu", () => {
-      document.getElementById("lvl-hud").style.display = "none";
-      document.querySelector(".hud-controls").style.display = "none";
-      document.getElementById("strike-hud").classList.add("hidden");
-      document.getElementById("btn-discard").classList.add("hidden");
+      
+      
+      null.classList.add("hidden");
+      null.classList.add("hidden");
 
       add([rect(W, H), color(15, 15, 30), z(0)]);
 
@@ -2283,8 +2168,8 @@
 
     // ── Level Select Scene ───────────────────────────────────────────────
     scene("levelSelect", () => {
-      document.getElementById("lvl-hud").style.display = "none";
-      document.querySelector(".hud-controls").style.display = "none";
+      
+      
 
       add([rect(W, H), color(15, 15, 30), z(0)]);
       add([text("Select Level", { size: 36, font: "monospace" }), pos(W/2, 60), anchor("center"), color(200, 200, 255)]);
@@ -2310,10 +2195,10 @@
 
     // ── Shop Scene ───────────────────────────────────────────────────────
     scene("shop", () => {
-      document.getElementById("lvl-hud").style.display = "none";
-      document.querySelector(".hud-controls").style.display = "none";
-      document.getElementById("strike-hud").classList.add("hidden");
-      document.getElementById("btn-discard").classList.add("hidden");
+      
+      
+      null.classList.add("hidden");
+      null.classList.add("hidden");
 
       add([rect(W, H), color(15, 15, 30), z(0)]);
 
