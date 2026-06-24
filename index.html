@@ -355,6 +355,8 @@
       equippedPlayerSkin:    "default",
       unlockedBallColors:    ["white"],
       equippedBallColor:     "white",
+      unlockedBackgrounds:   ["default"],
+      equippedBackground:    "default",
     };
 
     function resetGameStateToDefaults() {
@@ -363,6 +365,8 @@
       gameState.equippedPlayerSkin = "default";
       gameState.unlockedBallColors = ["white"];
       gameState.equippedBallColor = "white";
+      gameState.unlockedBackgrounds = ["default"];
+      gameState.equippedBackground = "default";
       gameState.currentLevelIndex = 0;
       gameState.totalGameScore = 0;
       gameState.totalShotsFired = 0;
@@ -645,12 +649,10 @@
       if (ball) { destroy(ball); ball = null; }
       sfx.playBuzzer();
       
-      const bg = add([rect(W, H), color(0, 50, 150), opacity(0.85), z(99), "penalty_overlay"]);
       const overlay = add([
-        sprite("water splash"),
-        pos(W/2, H/2),
-        anchor("center"),
-        scale(1),
+        rect(W, H),
+        color(0, 50, 150),
+        opacity(0.85),
         z(100),
         area(),
         "penalty_overlay"
@@ -688,12 +690,10 @@
       isMenuPaused = true; sfx.stopStretch();
       sfx.playBuzzer();
       
-      const bg = add([rect(W, H), color(60, 40, 20), opacity(0.95), z(99), "penalty_overlay"]);
       const overlay = add([
-        sprite("mud splash"),
-        pos(W/2, H/2),
-        anchor("center"),
-        scale(1),
+        rect(W, H),
+        color(60, 40, 20),
+        opacity(0.95),
         z(100),
         area(),
         "penalty_overlay"
@@ -1414,6 +1414,12 @@
     window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
 
     // ── Cosmetics Data ───────────────────────────────────────────────────
+    const SHOP_BACKGROUNDS = [
+      { id: "default", name: "Deep Space", cost: 0 },
+      { id: "sunset", name: "Neon Sunset", cost: 15 },
+      { id: "matrix", name: "Matrix Grid", cost: 30 }
+    ];
+
     const SHOP_SKINS = [
       { id: "default", name: "Default Boy", cost: 0 },
       { id: "macaroni", name: "Macaroni", cost: 20 },
@@ -1459,9 +1465,16 @@
     }
 
     function addAnimatedBackground() {
+      let c1 = [10, 20, 40], c2 = [40, 10, 30];
+      if (gameState.equippedBackground === "sunset") {
+        c1 = [40, 10, 20]; c2 = [80, 40, 10];
+      } else if (gameState.equippedBackground === "matrix") {
+        c1 = [5, 20, 5]; c2 = [10, 40, 10];
+      }
+      
       const bgColors = [
-        add([rect(W, H), color(10, 20, 40), z(0)]), // dark blue
-        add([rect(W, H), color(40, 10, 30), z(0), opacity(0)]), // dark red/purple
+        add([rect(W, H), color(...c1), z(0)]), 
+        add([rect(W, H), color(...c2), z(0), opacity(0)]), 
       ];
       let t = 0;
       onUpdate(() => {
@@ -1584,9 +1597,11 @@
         items.forEach((item, i) => {
           const y = startY + 45 + i * 50;
           const unlocked = (type === "skin" && gameState.unlockedPlayerSkins.includes(item.id)) ||
-                           (type === "ball" && gameState.unlockedBallColors.includes(item.id));
+                           (type === "ball" && gameState.unlockedBallColors.includes(item.id)) ||
+                           (type === "bg" && gameState.unlockedBackgrounds.includes(item.id));
           const equipped = (type === "skin" && gameState.equippedPlayerSkin === item.id) ||
-                           (type === "ball" && gameState.equippedBallColor === item.id);
+                           (type === "ball" && gameState.equippedBallColor === item.id) ||
+                           (type === "bg" && gameState.equippedBackground === item.id);
                            
           let btnColor = unlocked ? (equipped ? [50, 200, 50] : [100, 100, 100]) : [200, 150, 50];
           let statusTxt = equipped ? "EQUIPPED" : (unlocked ? "OWNED" : `${item.cost} Coins`);
@@ -1601,12 +1616,14 @@
               sfx.playClick();
               if (type === "skin") gameState.equippedPlayerSkin = item.id;
               if (type === "ball") gameState.equippedBallColor = item.id;
+              if (type === "bg") gameState.equippedBackground = item.id;
               saveGame(); wait(0.01, () => go("shop"));
             } else if (gameState.coins >= item.cost) {
               sfx.playClick();
               gameState.coins -= item.cost;
               if (type === "skin") gameState.unlockedPlayerSkins.push(item.id);
               if (type === "ball") gameState.unlockedBallColors.push(item.id);
+              if (type === "bg") gameState.unlockedBackgrounds.push(item.id);
               saveGame(); wait(0.01, () => go("shop"));
             } else {
               sfx.playBuzzer();
@@ -1617,8 +1634,9 @@
         });
       }
 
-      createShopList("- Player Skins -", SHOP_SKINS, "skin", 140);
-      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 380);
+      createShopList("- Player Skins -", SHOP_SKINS, "skin", 120);
+      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 300);
+      createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 440);
       
       createRichButton("BACK", vec2(W/2, H - 60), () => wait(0.01, () => go("menu")), [150, 50, 50]);
     });
