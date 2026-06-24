@@ -922,6 +922,9 @@
     // ── Kaboom canvas initialization ─────────────────────────────────────────
     kaboom({ fullscreen: true, scale: 1, background: [8, 8, 22] });
 
+    loadSprite("water splash", "water_splash.png");
+    loadSprite("mud splash", "mud_splash.png");
+
     // ── Color palette ─────────────────────────────────────────────────────────
     const PAL = {
       batter:  [255, 210, 60],
@@ -1247,57 +1250,48 @@
     let wipeCount = 0, isWiping = false, wipeStartX = 0, wipeStartY = 0;
     let mudWipeCount = 0, isMudWiping = false, mudWipeStartX = 0, mudWipeStartY = 0;
 
-    // ── Water penalty ─────────────────────────────────────────────────────────
+    
+    let wipeCount = 0;
+    let mudWipeCount = 0;
 
     function triggerThreeStrikesPenalty() {
       isMenuPaused = true; sfx.stopStretch();
       if (ball) { destroy(ball); ball = null; }
-      null.classList.add("hidden");
-      penaltyOverlay.classList.remove("hidden");
-      bucketContainer.className = "";
-      void bucketContainer.offsetWidth;
-      bucketContainer.classList.add("grow");
-      setTimeout(() => { if (!penaltyOverlay.classList.contains("hidden")) bucketContainer.classList.add("tip"); }, 800);
-      setTimeout(() => {
-        if (penaltyOverlay.classList.contains("hidden")) return;
-        bucketContainer.classList.add("fade-out");
-        waterSplash.classList.remove("hidden");
-        void waterSplash.offsetWidth;
-        waterSplash.classList.add("show");
-        wipeCount = 0; updateWipeUI(); sfx.playBuzzer();
-      }, 1200);
+      sfx.playBuzzer();
+      
+      const overlay = add([
+        sprite("water splash"),
+        pos(W/2, H/2),
+        anchor("center"),
+        scale(1),
+        z(100),
+        area(),
+        "penalty_overlay"
+      ]);
+      
+      const inst = add([
+        text("Tap 3 times to wipe!", { size: 24, font: "monospace" }),
+        pos(W/2, H/2 + 200),
+        anchor("center"),
+        color(100, 200, 255),
+        z(101),
+        "penalty_overlay"
+      ]);
+
+      wipeCount = 0;
+      
+      overlay.onClick(() => {
+        wipeCount++;
+        sfx.playWipe();
+        overlay.opacity -= 0.3;
+        if (wipeCount >= 3) {
+          destroyAll("penalty_overlay");
+          isMenuPaused = false;
+          gameState.strikes = 0;
+          updateStrikesHUD();
+        }
+      });
     }
-
-    function updateWipeUI() {
-      const r = 3 - wipeCount;
-      wipeRemaining.innerText = r;
-      wipeProgressFill.style.width = `${(r/3)*100}%`;
-      waterSplash.style.background = `radial-gradient(circle, rgba(60,160,255,${0.2+r*0.15}) 0%, rgba(20,80,220,${0.3+r*0.15}) 100%)`;
-      waterSplash.style.backdropFilter = `blur(${r*2}px)`;
-    }
-
-    function registerWipeAction() {
-      if (wipeCount >= 3) return;
-      wipeCount++; sfx.playWipe(); updateWipeUI();
-      const flash = document.createElement("div");
-      Object.assign(flash.style, {position:"absolute",top:"0",left:"0",width:"100%",height:"100%",background:"rgba(255,255,255,0.25)",pointerEvents:"none",zIndex:"30"});
-      penaltyOverlay.appendChild(flash); setTimeout(() => flash.remove(), 100);
-      if (wipeCount >= 3) {
-        waterSplash.classList.remove("show");
-        setTimeout(() => {
-          penaltyOverlay.classList.add("hidden"); waterSplash.classList.add("hidden");
-          bucketContainer.className = "";
-          gameState.strikes = 0; updateStrikesHUD();
-          isMenuPaused = false; null.classList.remove("hidden");
-        }, 400);
-      }
-    }
-
-    waterSplash.addEventListener("pointerdown", (e) => { isWiping=true; wipeStartX=e.clientX; wipeStartY=e.clientY; });
-    waterSplash.addEventListener("pointermove",  (e) => { if (!isWiping) return; if (Math.hypot(e.clientX-wipeStartX,e.clientY-wipeStartY)>60){isWiping=false;registerWipeAction();} });
-    waterSplash.addEventListener("pointerup",    ()  => { if (isWiping){isWiping=false;registerWipeAction();} });
-
-    // ── Mud penalty ───────────────────────────────────────────────────────────
 
     function triggerMudSplatter() {
       if (!inFlight) return;
@@ -1305,43 +1299,41 @@
       if (ball) ball.hasStruck = true;
 
       isMenuPaused = true; sfx.stopStretch();
-      null.classList.add("hidden");
-      penaltyOverlay.classList.remove("hidden");
-      mudSplash.classList.remove("hidden");
-      void mudSplash.offsetWidth;
-      mudSplash.classList.add("show");
-      mudWipeCount = 0; updateMudWipeUI(); sfx.playBuzzer();
-    }
+      sfx.playBuzzer();
+      
+      const overlay = add([
+        sprite("mud splash"),
+        pos(W/2, H/2),
+        anchor("center"),
+        scale(1),
+        z(100),
+        area(),
+        "penalty_overlay"
+      ]);
 
-    function updateMudWipeUI() {
-      const r = 3 - mudWipeCount;
-      mudWipeRemaining.innerText = r;
-      mudWipeProgressFill.style.width = `${(r/3)*100}%`;
-      mudSplash.style.background = `radial-gradient(circle, rgba(120,80,50,${0.3+r*0.15}) 0%, rgba(60,40,25,${0.4+r*0.15}) 100%)`;
-      mudSplash.style.backdropFilter = `blur(${r*2}px)`;
-    }
+      const inst = add([
+        text("Tap 3 times to wipe!", { size: 24, font: "monospace" }),
+        pos(W/2, H/2 + 200),
+        anchor("center"),
+        color(255, 150, 100),
+        z(101),
+        "penalty_overlay"
+      ]);
 
-    function registerMudWipeAction() {
-      if (mudWipeCount >= 3) return;
-      mudWipeCount++; sfx.playWipe(); updateMudWipeUI();
-      const flash = document.createElement("div");
-      Object.assign(flash.style, {position:"absolute",top:"0",left:"0",width:"100%",height:"100%",background:"rgba(120,80,50,0.4)",pointerEvents:"none",zIndex:"30"});
-      penaltyOverlay.appendChild(flash); setTimeout(() => flash.remove(), 100);
-      if (mudWipeCount >= 3) {
-        mudSplash.classList.remove("show");
-        setTimeout(() => {
-          penaltyOverlay.classList.add("hidden"); mudSplash.classList.add("hidden");
-          isMenuPaused = false; null.classList.remove("hidden");
+      mudWipeCount = 0;
+      
+      overlay.onClick(() => {
+        mudWipeCount++;
+        sfx.playWipe();
+        overlay.opacity -= 0.3;
+        if (mudWipeCount >= 3) {
+          destroyAll("penalty_overlay");
+          isMenuPaused = false;
           loadRandomProjectile();
-        }, 400);
-      }
+        }
+      });
     }
-
-    mudSplash.addEventListener("pointerdown", (e) => { isMudWiping=true; mudWipeStartX=e.clientX; mudWipeStartY=e.clientY; });
-    mudSplash.addEventListener("pointermove",  (e) => { if (!isMudWiping) return; if (Math.hypot(e.clientX-mudWipeStartX,e.clientY-mudWipeStartY)>60){isMudWiping=false;registerMudWipeAction();} });
-    mudSplash.addEventListener("pointerup",    ()  => { if (isMudWiping){isMudWiping=false;registerMudWipeAction();} });
-
-    /** Discard currently loaded projectile and replace it randomly. */
+/** Discard currently loaded projectile and replace it randomly. */
     function discardCurrentItem() {
       if (inFlight || isMenuPaused) return;
       sfx.playDiscard(); loadRandomProjectile();
@@ -1360,12 +1352,7 @@
       const config = LEVELS[gameState.currentLevelIndex];
 
       // ── HUD ──────────────────────────────────────────────────────────────
-      
-      
-      
-      
-      null.classList.remove("hidden");
-      null.classList.remove("hidden");
+
 
       // Economy UI
       const coinsHUD = add([
@@ -1389,8 +1376,7 @@
       btnShop.add([text("SHOP", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
       btnShop.onClick(() => { 
         sfx.playClick();
-        null.classList.add("hidden");
-        null.classList.add("hidden");
+
         
         
         go("shop"); 
@@ -1405,11 +1391,6 @@
       gameState.levelShotsFired    = 0;
       gameState.levelBasketsScored = 0;
       gameState.strikes            = 0;
-
-      penaltyOverlay.classList.add("hidden");
-      waterSplash.classList.add("hidden");
-      mudSplash.classList.add("hidden");
-      bucketContainer.className = "";
       wipeCount = 0; mudWipeCount = 0;
       kbPullLength = 0; kbAimAngle = -90; usingKeyboardAim = false;
 
@@ -1844,7 +1825,6 @@
 
       function triggerLevelWin() {
       isMenuPaused=true; sfx.playWin();
-        null.classList.add("hidden");
         if (ball) { destroy(ball); ball=null; }
         addConfetti({pos:vec2(W/2,H/3)}); addConfetti({pos:vec2(W/4,H/3)}); addConfetti({pos:vec2(3*W/4,H/3)});
         wait(1.5, () => {
@@ -1867,7 +1847,6 @@
         alertEl.classList.remove("hidden"); setTimeout(()=>alertEl.classList.add("hidden"),1000);
         if (gameState.strikes>=3) {
           isMenuPaused=true; sfx.stopStretch();
-          null.classList.add("hidden");
           wait(1.2, ()=>{ if(ball){destroy(ball);ball=null;} triggerThreeStrikesPenalty(); });
         }
       }
@@ -2051,7 +2030,6 @@
 
     function showLevelUpOverlay() {
       const lc=LEVELS[gameState.currentLevelIndex];
-      null.classList.add("hidden");
       
       
       
@@ -2061,7 +2039,7 @@
     }
 
     function showVictoryOverlay() {
-      isMenuPaused=true; null.classList.add("hidden");
+      isMenuPaused=true;
       
       
       const acc=gameState.totalShotsFired>0?Math.round((gameState.totalBasketsScored/gameState.totalShotsFired)*100):0;
@@ -2070,7 +2048,6 @@
     }
 
     function showFailOverlay() {
-      null.classList.add("hidden");
       
       
       screenFail.classList.remove("hidden");
@@ -2124,10 +2101,7 @@
 
     // ── Main Menu Scene ──────────────────────────────────────────────────
     scene("menu", () => {
-      
-      
-      null.classList.add("hidden");
-      null.classList.add("hidden");
+
 
       add([rect(W, H), color(15, 15, 30), z(0)]);
 
@@ -2195,10 +2169,7 @@
 
     // ── Shop Scene ───────────────────────────────────────────────────────
     scene("shop", () => {
-      
-      
-      null.classList.add("hidden");
-      null.classList.add("hidden");
+
 
       add([rect(W, H), color(15, 15, 30), z(0)]);
 
