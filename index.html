@@ -972,6 +972,12 @@
               drawRect({width:BATTER_W+14,height:10,radius:3,pos:vec2(0,-BATTER_H/2-4),anchor:"center",color:rgb(20,50,200)});
               drawRect({width:BATTER_W,height:16,radius:8,pos:vec2(0,-BATTER_H/2-10),anchor:"center",color:rgb(20,50,200)});
               drawText({text:"24",pos:vec2(0,-BATTER_H/2-12),size:14,font:"monospace",anchor:"center",color:rgb(255,255,255)});
+            } else if (skin === "red_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(255,80,80),outline:{color:rgb(20,20,30),width:3}});
+            } else if (skin === "green_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,255,80),outline:{color:rgb(20,20,30),width:3}});
+            } else if (skin === "blue_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,150,255),outline:{color:rgb(20,20,30),width:3}});
             } else {
               drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(...PAL.batter),outline:{color:rgb(20,20,30),width:3}});
             }
@@ -1422,6 +1428,9 @@
 
     const SHOP_SKINS = [
       { id: "default", name: "Default Boy", cost: 0 },
+      { id: "red_boy", name: "Red Skin", cost: 5 },
+      { id: "green_boy", name: "Green Skin", cost: 5 },
+      { id: "blue_boy", name: "Blue Skin", cost: 5 },
       { id: "macaroni", name: "Macaroni", cost: 20 },
       { id: "noodle", name: "Pool Noodle", cost: 30 },
       { id: "ballplayer", name: "Ball Player", cost: 50 }
@@ -1429,6 +1438,9 @@
     
     const SHOP_BALLS = [
       { id: "white", name: "Standard", cost: 0 },
+      { id: "red", name: "Red Ball", cost: 5 },
+      { id: "green", name: "Green Ball", cost: 5 },
+      { id: "purple", name: "Purple Ball", cost: 5 },
       { id: "gold", name: "Gold Ball", cost: 10 },
       { id: "neon", name: "Neon Blue", cost: 15 }
     ];
@@ -1592,10 +1604,13 @@
       add([text("WACKY SHOP", { size: 36, font: "monospace" }), pos(W/2, 50), anchor("center"), color(255, 215, 0), z(5)]);
       const coinsTxt = add([text(`Coins: ${gameState.coins}`, { size: 20, font: "monospace" }), pos(W/2, 90), anchor("center"), color(255, 255, 255), z(5)]);
 
-      function createShopList(title, items, type, startY) {
+            function createShopList(title, items, type, startY) {
         add([text(title, { size: 20, font: "monospace" }), pos(W/2, startY), anchor("center"), color(150, 200, 255), z(5)]);
         items.forEach((item, i) => {
-          const y = startY + 45 + i * 50;
+          const col = i % 2;
+          const rowIdx = Math.floor(i / 2);
+          const x = col === 0 ? W/2 - 115 : W/2 + 115;
+          const y = startY + 40 + rowIdx * 45;
           const unlocked = (type === "skin" && gameState.unlockedPlayerSkins.includes(item.id)) ||
                            (type === "ball" && gameState.unlockedBallColors.includes(item.id)) ||
                            (type === "bg" && gameState.unlockedBackgrounds.includes(item.id));
@@ -1604,11 +1619,11 @@
                            (type === "bg" && gameState.equippedBackground === item.id);
                            
           let btnColor = unlocked ? (equipped ? [50, 200, 50] : [100, 100, 100]) : [200, 150, 50];
-          let statusTxt = equipped ? "EQUIPPED" : (unlocked ? "OWNED" : `${item.cost} Coins`);
+          let statusTxt = equipped ? "EQP" : (unlocked ? "OWN" : `${item.cost}c`);
           
-          const row = add([rect(300, 40, { radius: 8 }), pos(W/2, y), anchor("center"), color(...btnColor), area({cursor:"pointer"}), z(5)]);
-          row.add([text(item.name, { size: 14, font: "monospace" }), pos(-140, 0), anchor("left"), color(255,255,255)]);
-          const statLbl = row.add([text(statusTxt, { size: 14, font: "monospace" }), pos(140, 0), anchor("right"), color(255,255,255)]);
+          const row = add([rect(210, 36, { radius: 6 }), pos(x, y), anchor("center"), color(...btnColor), area({cursor:"pointer"}), z(5)]);
+          row.add([text(item.name, { size: 12, font: "monospace" }), pos(-95, 0), anchor("left"), color(255,255,255)]);
+          const statLbl = row.add([text(statusTxt, { size: 12, font: "monospace" }), pos(95, 0), anchor("right"), color(255,255,255)]);
 
           row.onClick(() => {
             if (equipped) return;
@@ -1634,9 +1649,9 @@
         });
       }
 
-      createShopList("- Player Skins -", SHOP_SKINS, "skin", 120);
-      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 300);
-      createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 440);
+      createShopList("- Player Skins -", SHOP_SKINS, "skin", 130);
+      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 320);
+      createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 490);
       
       createRichButton("BACK", vec2(W/2, H - 60), () => wait(0.01, () => go("menu")), [150, 50, 50]);
     });
