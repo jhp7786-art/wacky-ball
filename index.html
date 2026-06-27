@@ -357,6 +357,8 @@
       equippedBallColor:     "white",
       unlockedBackgrounds:   ["default"],
       equippedBackground:    "default",
+      sessionWords:          [],
+      equippedBand:          null,
     };
 
     function resetGameStateToDefaults() {
@@ -374,6 +376,8 @@
       gameState.strikes = 0;
       gameState.completedWords = [];
       gameState.currentWord = "";
+      gameState.sessionWords = [];
+      gameState.equippedBand = null;
     }
 
     function loadGame() {
@@ -454,14 +458,14 @@
       ]
     };
 
-    // Per-level word pools (1-based level key)
-    const LEVEL_WORDS = {
-      1: ["CAT", "DOG", "PIG", "COW", "BAT", "BUG"],           // Pre-K / K (3 letters)
-      2: ["PLAY", "JUMP", "FROG", "BIRD", "FISH", "BEAR"],      // K / 1st Grade (4 letters)
-      3: ["APPLE", "HAPPY", "TIGER", "WATER", "SNAKE"],         // 1st Grade (5 letters)
-      4: ["YELLOW", "SCHOOL", "FRIEND", "MONKEY", "ORANGE"],    // 2nd Grade (6 letters)
-      5: ["COLSON", "BASEBALL", "CHICKEN", "TEACHER"],          // Colson's Customs
-      6: ["ELEPHANT", "DINOSAUR", "UMBRELLA", "ASTRONAUT"],     // 3rd Grade (Challenge)
+    // Global word bank grouped by level
+    const wordBank = {
+      level1: ["CAT", "DOG", "BAT", "PIG", "SUN", "BOX", "BUG", "COW", "LIP", "HAT", "ANT", "BEE", "BUS", "CAR", "CUP", "DAY", "EAR", "EGG", "EYE", "FOX", "GUM", "HEN", "ICE", "JAR", "KEY", "LOG", "MAP", "NUT", "OWL", "PEN", "RAT", "SEA", "TOY", "VAN", "WEB"],
+      level2: ["PLAY", "JUMP", "FROG", "BIRD", "FISH", "BEAR"],
+      level3: ["APPLE", "HAPPY", "TIGER", "WATER", "SNAKE"],
+      level4: ["YELLOW", "SCHOOL", "FRIEND", "MONKEY", "ORANGE"],
+      level5: ["COLSON", "BASEBALL", "CHICKEN", "TEACHER"],
+      level6: ["ELEPHANT", "DINOSAUR", "UMBRELLA", "ASTRONAUT"]
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -472,7 +476,12 @@
 
     /** Pick a random unused word for the current level; triggers level-win if pool is empty. */
     function selectRandomWord() {
-      const words     = LEVEL_WORDS[gameState.currentLevelIndex + 1];
+      if (gameState.completedWords.length >= 6) {
+        add([text("Level Complete!", { size: 48, font: "monospace" }), pos(width()/2, height()/2), anchor("center"), color(50, 255, 50), z(100)]);
+        wait(2, () => go("levelSelect"));
+        return;
+      }
+      const words     = gameState.sessionWords;
       const available = words.filter(w => !gameState.completedWords.includes(w));
       if (available.length === 0) { triggerLevelWin(); return null; }
       gameState.currentWord = available[Math.floor(rand(0, available.length))];
@@ -729,6 +738,9 @@
       if (bat) { bat.scale = vec2(1.2); bat.happyTimer = 0.5; }
     }
 
+    // ── Game Background ──────────────────────────────────────────────────
+    addAnimatedBackground();
+
     // ─────────────────────────────────────────────────────────────────────────
     // --- CORE SCENES ---
     // Main gameplay loop: entity spawning, collision logic,
@@ -754,13 +766,14 @@
 
       const btnShop = add([
         rect(80, 30, { radius: 8 }),
-        pos(W - 55, 55),
-        anchor("center"),
+        pos(width() - 20, 20),
+        anchor("topright"),
         color(50, 150, 50),
         area({ cursor: "pointer" }),
         z(10),
         "btnShop"
       ]);
+      btnShop.add([text("SHOP", { size: 14, font: "monospace" }), pos(-40, 15), anchor("center"), color(255, 255, 255)]);
       btnShop.add([text("SHOP", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
       btnShop.onClick(() => { 
         sfx.playClick();
@@ -786,16 +799,14 @@
       loadRandomProjectile();
       curWindVal = config.wind ? rand(-150, 150) : 0;
 
-      // ── Background stars ─────────────────────────────────────────────────
-      for (let i = 0; i < 50; i++) {
-        add([pos(rand(0,W),rand(0,H*0.75)), circle(rand(0.5,2.5)), color(...PAL.star), opacity(rand(0.15,0.65)), z(0)]);
-      }
-
-      // ── Ground ───────────────────────────────────────────────────────────
-      add([rect(W,16), pos(0,H-20), color(32,32,60), area(), "ground", z(1)]);
+      // ── Game Background ──────────────────────────────────────────────────
+      addAnimatedBackground();
 
       // ── Word selection ───────────────────────────────────────────────────
-      if (!gameState.currentWord || gameState.completedWords.length === 0) {
+      if (!gameState.currentWord || gameState.completedWords.length === 0 || !gameState.sessionWords || gameState.sessionWords.length === 0) {
+        const allWords = [...wordBank["level" + (gameState.currentLevelIndex + 1)]];
+        allWords.sort(() => Math.random() - 0.5);
+        gameState.sessionWords = allWords.slice(0, 6);
         selectRandomWord();
       }
 
@@ -962,23 +973,31 @@
           blinkTimer:2.5, sadTimer:0, happyTimer:0, gaspTimer:0, lookDir:vec2(0),
           draw() {
             const skin = gameState.equippedPlayerSkin;
-            if (skin === "macaroni") {
-              drawRect({width:BATTER_W,height:BATTER_H,radius:24,anchor:"center",color:rgb(255,200,50),outline:{color:rgb(200,100,20),width:3}});
-            } else if (skin === "noodle") {
-              drawRect({width:BATTER_W-20,height:BATTER_H+30,radius:12,anchor:"center",color:rgb(255,50,150),outline:{color:rgb(150,20,80),width:3}});
-              drawLine({p1:vec2(-10, -BATTER_H/2), p2:vec2(10, -BATTER_H/2), width:3, color:rgb(150,20,80)});
-            } else if (skin === "ballplayer") {
-              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(240,180,140),outline:{color:rgb(20,20,30),width:3}});
-              drawRect({width:BATTER_W+14,height:10,radius:3,pos:vec2(0,-BATTER_H/2-4),anchor:"center",color:rgb(20,50,200)});
-              drawRect({width:BATTER_W,height:16,radius:8,pos:vec2(0,-BATTER_H/2-10),anchor:"center",color:rgb(20,50,200)});
-              drawText({text:"24",pos:vec2(0,-BATTER_H/2-12),size:14,font:"monospace",anchor:"center",color:rgb(255,255,255)});
-            } else if (skin === "red_boy") {
-              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(255,80,80),outline:{color:rgb(20,20,30),width:3}});
-            } else if (skin === "green_boy") {
-              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,255,80),outline:{color:rgb(20,20,30),width:3}});
-            } else if (skin === "blue_boy") {
-              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,150,255),outline:{color:rgb(20,20,30),width:3}});
-            } else {
+            if (skin === "robot") {
+                drawRect({width:BATTER_W,height:BATTER_H,radius:4,anchor:"center",color:rgb(150,150,170),outline:{color:rgb(50,50,50),width:3}});
+                drawCircle({radius:6,pos:vec2(-10, -5),color:rgb(255,50,50)});
+                drawCircle({radius:6,pos:vec2(10, -5),color:rgb(255,50,50)});
+                drawLine({p1:vec2(-10, 10), p2:vec2(10, 10), width:3, color:rgb(50,50,50)});
+              } else if (skin === "astronaut") {
+                drawRect({width:BATTER_W+10,height:BATTER_H+10,radius:16,anchor:"center",color:rgb(240,240,255),outline:{color:rgb(100,100,120),width:3}});
+                drawRect({width:BATTER_W-10,height:BATTER_H-20,radius:8,pos:vec2(0,-5),anchor:"center",color:rgb(50,50,80)});
+              } else if (skin === "ninja") {
+                drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(30,30,40),outline:{color:rgb(0,0,0),width:3}});
+                drawRect({width:BATTER_W,height:12,pos:vec2(0,-5),anchor:"center",color:rgb(250,200,150)});
+              } else if (skin === "camo") {
+                drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,120,60),outline:{color:rgb(40,60,30),width:3}});
+                drawCircle({radius:8,pos:vec2(-10, -10),color:rgb(60,90,40)});
+                drawCircle({radius:12,pos:vec2(10, 10),color:rgb(60,90,40)});
+              } else if (skin === "macaroni") {
+                drawPolygon({pts:[vec2(-20,15), vec2(-10,-10), vec2(10,-10), vec2(20,15), vec2(10,25), vec2(0,5), vec2(-10,25)],color:rgb(255,200,50),outline:{color:rgb(200,100,20),width:3}});
+              } else if (skin === "ballcap") {
+                drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(240,180,140),outline:{color:rgb(20,20,30),width:3}});
+                drawRect({width:BATTER_W+14,height:10,radius:3,pos:vec2(0,-BATTER_H/2-4),anchor:"center",color:rgb(200,50,50)});
+                drawRect({width:BATTER_W,height:16,radius:8,pos:vec2(0,-BATTER_H/2-10),anchor:"center",color:rgb(200,50,50)});
+              } else if (skin === "rubber_chicken") {
+                drawRect({width:BATTER_W-10,height:BATTER_H+20,radius:10,anchor:"center",color:rgb(255,220,50),outline:{color:rgb(200,150,0),width:3}});
+                drawCircle({radius:8,pos:vec2(0, -BATTER_H/2-10),color:rgb(255,50,50)});
+              } else {
               drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(...PAL.batter),outline:{color:rgb(20,20,30),width:3}});
             }
             const eL=vec2(-12,-8).add(this.lookDir), eR=vec2(12,-8).add(this.lookDir);
@@ -1028,8 +1047,12 @@
         draw() {
           if (dragging && dragCurrent && !isMenuPaused) {
             const pull = clampPull(dragCurrent);
-            drawLine({p1:vec2(BATTER_X-25,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...PAL.sling)});
-            drawLine({p1:vec2(BATTER_X+23,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...PAL.sling)});
+            let bandCol = PAL.sling;
+            if (gameState.equippedBand === "red") bandCol = [255,50,50];
+            else if (gameState.equippedBand === "blue") bandCol = [50,50,255];
+            else if (gameState.equippedBand === "green") bandCol = [50,255,50];
+            drawLine({p1:vec2(BATTER_X-25,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...bandCol)});
+            drawLine({p1:vec2(BATTER_X+23,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...bandCol)});
             if (gameState.currentProjectileType) drawProjectile(gameState.currentProjectileType.type,pull,BALL_R,1.0);
             const vx=(dragStart.x-pull.x)*LAUNCH_SCALE, vy=(dragStart.y-pull.y)*LAUNCH_SCALE;
             const pMass = gameState.currentProjectileType ? gameState.currentProjectileType.mass : 1.0;
@@ -1039,7 +1062,7 @@
               drawCircle({pos:vec2(px,py),radius:3.5,color:rgb(255,255,255),opacity:(1-t/0.85)*0.7});
             }
           } else if (!inFlight && gameState.currentProjectileType && !isMenuPaused) {
-            drawProjectile(gameState.currentProjectileType.type, vec2(BATTER_X,BATTER_Y-20), BALL_R, 1.0);
+            drawProjectile(gameState.currentProjectileType.type, vec2(BATTER_X,BATTER_Y-35), BALL_R, 1.0);
           }
         }
       }]);
@@ -1171,6 +1194,9 @@
             h.scored=true; h.netRef.flexY=24; h.netRef.flexSpeed=160;
             h.opacity=0.9; wait(0.2,()=>{h.opacity=0.24;});
             sfx.playScore(); spawnSparks(h.pos.x,h.pos.y);
+            gameState.coins += 1; saveGame();
+            const coinsHUD = get("coinsHUD")[0]; if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
+            try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(h.letter)); } catch(e){}
             if (ball.type==="watermelon") { spawnWatermelonSplat(h.pos.x,h.pos.y); h.stained=true; }
             if (h.letter===gameState.currentWord[gameState.currentLetterIndex]) {
               gameState.totalGameScore+=25; gameState.levelBasketsScored++; gameState.totalBasketsScored++;
@@ -1201,6 +1227,8 @@
 
       function triggerWordWin() {
         gameState.completedWords.push(gameState.currentWord);
+        gameState.coins += 5; saveGame();
+        const coinsHUD = get("coinsHUD")[0]; if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
         sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
         isMenuPaused = true;
 
@@ -1299,9 +1327,11 @@
         if (!inFlight) return;
         if (!b.isGood) {
           sfx.playScore(); gameState.totalGameScore+=50;
+          gameState.coins += 2; saveGame();
+          const coinsHUD = get("coinsHUD")[0]; if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
           spawnTrashSuccessSparks(trash.pos.x,trash.pos.y);
           trash.scale=vec2(1.3); destroy(b); inFlight=false; ball=null;
-          const fb=add([text("+50 Recycle!",{size:12,font:"monospace"}),pos(trash.pos.x+30,trash.pos.y-10),anchor("left"),color(100,255,100),lifespan(1.0),z(10)]);
+          const fb=add([text("+50 Score / +2 Coins!",{size:12,font:"monospace"}),pos(trash.pos.x+30,trash.pos.y-10),anchor("left"),color(100,255,100),lifespan(1.0),z(10)]);
           fb.onUpdate(()=>{fb.pos.y-=30*dt();}); wait(0.6,loadRandomProjectile);
         } else {
           sfx.playRim(); reflectBall(b,trash.pos,BALL_R+25);
@@ -1420,30 +1450,40 @@
     window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
 
     // ── Cosmetics Data ───────────────────────────────────────────────────
-    const SHOP_BACKGROUNDS = [
-      { id: "default", name: "Deep Space", cost: 0 },
-      { id: "sunset", name: "Neon Sunset", cost: 15 },
-      { id: "matrix", name: "Matrix Grid", cost: 30 }
-    ];
+          const SHOP_BACKGROUNDS = [
+        { id: "default", name: "Deep Space", cost: 0 },
+        { id: "basketball", name: "Basketball Court", cost: 10 },
+        { id: "baseball", name: "Baseball Field", cost: 15 },
+        { id: "football", name: "Football Field", cost: 20 },
+        { id: "neon", name: "Neon", cost: 30 }
+      ];
+  
+      const SHOP_SKINS = [
+        { id: "default", name: "Default Boy", cost: 0 },
+        { id: "robot", name: "Robot", cost: 10 },
+        { id: "astronaut", name: "Astronaut", cost: 15 },
+        { id: "ninja", name: "Ninja", cost: 20 },
+        { id: "camo", name: "Camo", cost: 25 },
+        { id: "macaroni", name: "Macaroni", cost: 30 },
+        { id: "ballcap", name: "Ball Cap", cost: 35 },
+        { id: "rubber_chicken", name: "Rubber Chicken", cost: 50 }
+      ];
+      
+      const SHOP_BALLS = [
+        { id: "white", name: "Standard", cost: 0 },
+        { id: "red", name: "Red Ball", cost: 5 },
+        { id: "green", name: "Green Ball", cost: 5 },
+        { id: "purple", name: "Purple Ball", cost: 5 },
+        { id: "gold", name: "Gold Ball", cost: 10 },
+        { id: "neon", name: "Neon Blue", cost: 15 }
+      ];
 
-    const SHOP_SKINS = [
-      { id: "default", name: "Default Boy", cost: 0 },
-      { id: "red_boy", name: "Red Skin", cost: 5 },
-      { id: "green_boy", name: "Green Skin", cost: 5 },
-      { id: "blue_boy", name: "Blue Skin", cost: 5 },
-      { id: "macaroni", name: "Macaroni", cost: 20 },
-      { id: "noodle", name: "Pool Noodle", cost: 30 },
-      { id: "ballplayer", name: "Ball Player", cost: 50 }
-    ];
-    
-    const SHOP_BALLS = [
-      { id: "white", name: "Standard", cost: 0 },
-      { id: "red", name: "Red Ball", cost: 5 },
-      { id: "green", name: "Green Ball", cost: 5 },
-      { id: "purple", name: "Purple Ball", cost: 5 },
-      { id: "gold", name: "Gold Ball", cost: 10 },
-      { id: "neon", name: "Neon Blue", cost: 15 }
-    ];
+      const SHOP_STRINGS = [
+        { id: "default", name: "Default Band", cost: 0 },
+        { id: "red", name: "Red Band", cost: 10 },
+        { id: "blue", name: "Blue Band", cost: 10 },
+        { id: "green", name: "Green Band", cost: 10 }
+      ];
 
     // ── Rich UI Components ───────────────────────────────────────────────
     function createRichButton(txt, p, onClickFn, colorBase = [50, 100, 200]) {
@@ -1476,13 +1516,17 @@
       return btn;
     }
 
-    function addAnimatedBackground() {
-      let c1 = [10, 20, 40], c2 = [40, 10, 30];
-      if (gameState.equippedBackground === "sunset") {
-        c1 = [40, 10, 20]; c2 = [80, 40, 10];
-      } else if (gameState.equippedBackground === "matrix") {
-        c1 = [5, 20, 5]; c2 = [10, 40, 10];
-      }
+        function addAnimatedBackground() {
+        let c1 = [10, 20, 40], c2 = [40, 10, 30];
+        if (gameState.equippedBackground === "neon") {
+          c1 = [40, 10, 40]; c2 = [80, 20, 80];
+        } else if (gameState.equippedBackground === "basketball") {
+          c1 = [200, 100, 50]; c2 = [220, 120, 60];
+        } else if (gameState.equippedBackground === "baseball") {
+          c1 = [50, 150, 50]; c2 = [80, 180, 80];
+        } else if (gameState.equippedBackground === "football") {
+          c1 = [30, 100, 30]; c2 = [40, 120, 40];
+        }
       
       const bgColors = [
         add([rect(W, H), color(...c1), z(0)]), 
@@ -1511,60 +1555,41 @@
       addAnimatedBackground();
 
       // Floating Logo
-      const logo = add([sprite("logo"), pos(W/2, 180), anchor("center"), scale(0.25), z(5)]);
+      let logoClicks = 0;
+      const logo = add([sprite("logo"), pos(W/2, 180), anchor("center"), scale(0.25), area(), z(5)]);
       logo.onUpdate(() => {
         logo.pos.y = 120 + Math.sin(time() * 2) * 10;
       });
+      logo.onClick(() => {
+        if (currentProfile !== null) return;
+        logoClicks++;
+        if (logoClicks === 3) {
+          createRichButton("Dad", vec2(W/2, 640), () => {
+            currentProfile = "Dad";
+            loadGame();
+            wait(0.01, () => go("menu"));
+          }, [50, 50, 50]);
+        }
+      });
 
       if (currentProfile === null) {
-        let isEnteringName = false;
-        
-        const btnCreate = createRichButton("Create / Load Profile", vec2(W/2, 440), () => {
-          if (isEnteringName) return;
-          isEnteringName = true;
-          // Spawn Native Input UI
-          const overlay = add([rect(W, H), color(0,0,0), opacity(0.8), z(100), area()]);
-          const box = add([rect(300, 150, { radius: 16 }), pos(W/2, H/2), anchor("center"), color(30, 30, 50), z(101)]);
-          box.add([text("Enter Player Name:", { size: 18, font: "monospace" }), pos(0, -40), anchor("center"), color(255, 255, 255)]);
-          
-          let nameInput = "";
-          const nameTxt = box.add([text("_", { size: 24, font: "monospace" }), pos(0, 10), anchor("center"), color(100, 255, 100)]);
-          
-          const enterPrompt = box.add([text("Press ENTER to save", { size: 12, font: "monospace" }), pos(0, 50), anchor("center"), color(150, 150, 150)]);
-
-          const charListener = onCharInput((ch) => {
-            if (nameInput.length < 12 && /[a-zA-Z0-9 ]/.test(ch)) {
-              nameInput += ch;
-              nameTxt.text = nameInput + "_";
-            }
-          });
-          const keyListener = onKeyPress("backspace", () => {
-            nameInput = nameInput.slice(0, -1);
-            nameTxt.text = nameInput + "_";
-          });
-          const enterListener = onKeyPress("enter", () => {
-            if (nameInput.trim().length > 0) {
-              currentProfile = nameInput.trim();
-              loadGame();
-              charListener.cancel(); keyListener.cancel(); enterListener.cancel();
-              wait(0.01, () => go("menu"));
-            }
-          });
-          // Close on click outside
-          overlay.onClick(() => {
-            charListener.cancel(); keyListener.cancel(); enterListener.cancel();
-            destroy(overlay); destroy(box);
-            isEnteringName = false;
-          });
+        createRichButton("Cruz", vec2(W/2, 400), () => {
+          currentProfile = "Cruz";
+          loadGame();
+          wait(0.01, () => go("menu"));
         }, [40, 180, 100]);
 
-        createRichButton("Free Play", vec2(W/2, 520), () => {
-          if (isEnteringName) return;
-          currentProfile = "Guest";
+        createRichButton("Colson", vec2(W/2, 480), () => {
+          currentProfile = "Colson";
           loadGame();
           wait(0.01, () => go("menu"));
         }, [180, 100, 40]);
 
+        createRichButton("Guest", vec2(W/2, 560), () => {
+          currentProfile = "Guest";
+          loadGame();
+          wait(0.01, () => go("menu"));
+        }, [100, 100, 100]);
       } else {
         add([text(`Welcome, ${currentProfile}!`, { size: 24, font: "monospace" }), pos(W/2, 220), anchor("center"), color(100, 255, 100), z(5)]);
         add([text(`Coins: ${gameState.coins}`, { size: 18, font: "monospace" }), pos(W/2, 255), anchor("center"), color(255, 215, 0), z(5)]);
@@ -1603,6 +1628,17 @@
       addAnimatedBackground();
       add([text("WACKY SHOP", { size: 36, font: "monospace" }), pos(W/2, 50), anchor("center"), color(255, 215, 0), z(5)]);
       const coinsTxt = add([text(`Coins: ${gameState.coins}`, { size: 20, font: "monospace" }), pos(W/2, 90), anchor("center"), color(255, 255, 255), z(5)]);
+      
+      if (currentProfile === 'Dad') {
+        const btnCheat = add([rect(60, 30, { radius: 4 }), pos(20, 20), anchor("topleft"), color(255, 0, 0), area({ cursor: "pointer" }), z(10)]);
+        btnCheat.add([text("+50", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+        btnCheat.onClick(() => {
+          sfx.playScore();
+          gameState.coins += 50;
+          saveGame();
+          coinsTxt.text = `Coins: ${gameState.coins}`;
+        });
+      }
 
             function createShopList(title, items, type, startY) {
         add([text(title, { size: 20, font: "monospace" }), pos(W/2, startY), anchor("center"), color(150, 200, 255), z(5)]);
@@ -1611,12 +1647,14 @@
           const rowIdx = Math.floor(i / 2);
           const x = col === 0 ? W/2 - 115 : W/2 + 115;
           const y = startY + 40 + rowIdx * 45;
-          const unlocked = (type === "skin" && gameState.unlockedPlayerSkins.includes(item.id)) ||
-                           (type === "ball" && gameState.unlockedBallColors.includes(item.id)) ||
-                           (type === "bg" && gameState.unlockedBackgrounds.includes(item.id));
-          const equipped = (type === "skin" && gameState.equippedPlayerSkin === item.id) ||
-                           (type === "ball" && gameState.equippedBallColor === item.id) ||
-                           (type === "bg" && gameState.equippedBackground === item.id);
+                      const unlocked = (type === "skin" && gameState.unlockedPlayerSkins.includes(item.id)) ||
+                             (type === "ball" && gameState.unlockedBallColors.includes(item.id)) ||
+                             (type === "bg" && gameState.unlockedBackgrounds.includes(item.id)) ||
+                             (type === "band" && (gameState.unlockedBands || ["default"]).includes(item.id));
+            const equipped = (type === "skin" && gameState.equippedPlayerSkin === item.id) ||
+                             (type === "ball" && gameState.equippedBallColor === item.id) ||
+                             (type === "bg" && gameState.equippedBackground === item.id) ||
+                             (type === "band" && (gameState.equippedBand || "default") === item.id);
                            
           let btnColor = unlocked ? (equipped ? [50, 200, 50] : [100, 100, 100]) : [200, 150, 50];
           let statusTxt = equipped ? "EQP" : (unlocked ? "OWN" : `${item.cost}c`);
@@ -1629,17 +1667,22 @@
             if (equipped) return;
             if (unlocked) {
               sfx.playClick();
-              if (type === "skin") gameState.equippedPlayerSkin = item.id;
-              if (type === "ball") gameState.equippedBallColor = item.id;
-              if (type === "bg") gameState.equippedBackground = item.id;
-              saveGame(); wait(0.01, () => go("shop"));
-            } else if (gameState.coins >= item.cost) {
-              sfx.playClick();
-              gameState.coins -= item.cost;
-              if (type === "skin") gameState.unlockedPlayerSkins.push(item.id);
-              if (type === "ball") gameState.unlockedBallColors.push(item.id);
-              if (type === "bg") gameState.unlockedBackgrounds.push(item.id);
-              saveGame(); wait(0.01, () => go("shop"));
+                              if (type === "skin") gameState.equippedPlayerSkin = item.id;
+                if (type === "ball") gameState.equippedBallColor = item.id;
+                if (type === "bg") gameState.equippedBackground = item.id;
+                if (type === "band") gameState.equippedBand = item.id;
+                saveGame(); wait(0.01, () => go("shop"));
+              } else if (gameState.coins >= item.cost) {
+                sfx.playClick();
+                gameState.coins -= item.cost;
+                if (type === "skin") gameState.unlockedPlayerSkins.push(item.id);
+                if (type === "ball") gameState.unlockedBallColors.push(item.id);
+                if (type === "bg") gameState.unlockedBackgrounds.push(item.id);
+                if (type === "band") {
+                  if (!gameState.unlockedBands) gameState.unlockedBands = ["default"];
+                  gameState.unlockedBands.push(item.id);
+                }
+                saveGame(); wait(0.01, () => go("shop"));
             } else {
               sfx.playBuzzer();
               row.use(color(200, 50, 50));
@@ -1649,11 +1692,12 @@
         });
       }
 
-      createShopList("- Player Skins -", SHOP_SKINS, "skin", 130);
-      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 320);
-      createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 490);
-      
-      createRichButton("BACK", vec2(W/2, H - 60), () => wait(0.01, () => go("menu")), [150, 50, 50]);
+              createShopList("- Player Skins -", SHOP_SKINS, "skin", 105);
+        createShopList("- Ball Colors -", SHOP_BALLS, "ball", 285);
+        createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 445);
+        createShopList("- Strings -", SHOP_STRINGS, "band", 580);
+        
+        createRichButton("BACK", vec2(W/2, H - 50), () => wait(0.01, () => go("menu")), [150, 50, 50]);
     });
 
     // Kick off the game

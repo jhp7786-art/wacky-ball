@@ -1,0 +1,1660 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Wacky Ball: Spellbound! ðŸŽ¯</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="A premium slingshot spelling game built with Kaboom.js. Pull back, aim, and shoot the wacky ball to light up letters and spell words across multiple dynamic levels!" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  
+  
+<style>
+  body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #080816; }
+</style>
+</head>
+<body>
+
+  <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.js"></script>
+  <script>
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- INITIALIZATION & ASSETS ---
+    // Kaboom setup, SoundSynth class, speech synthesis bootstrap,
+    // color palette, and all physics/layout constants.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    // â”€â”€ Sound Synthesizer (Web Audio API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    class SoundSynth {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.stretchOsc = null;
+        this.stretchGain = null;
+      }
+
+      init() {
+        if (this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        
+        
+        if (this.muted) this.stopStretch();
+        return this.muted;
+      }
+
+      playStretch(pct) {
+        if (this.muted) return;
+        this.init();
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        const freq = 120 + pct * 240;
+        const vol  = 0.05 + pct * 0.12;
+        if (!this.stretchOsc) {
+          this.stretchOsc  = this.ctx.createOscillator();
+          this.stretchOsc.type = "triangle";
+          this.stretchGain = this.ctx.createGain();
+          this.stretchOsc.connect(this.stretchGain);
+          this.stretchGain.connect(this.ctx.destination);
+          this.stretchOsc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          this.stretchGain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          this.stretchOsc.start();
+        } else {
+          this.stretchOsc.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.05);
+          this.stretchGain.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.05);
+        }
+      }
+
+      stopStretch() {
+        if (this.stretchOsc) {
+          try {
+            const osc  = this.stretchOsc;
+            const gain = this.stretchGain;
+            this.stretchOsc  = null;
+            this.stretchGain = null;
+            gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+            setTimeout(() => { osc.stop(); osc.disconnect(); gain.disconnect(); }, 100);
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      playLaunch() {
+        if (this.muted) return;
+        this.init();
+        const now  = this.ctx.currentTime;
+        const osc  = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(480, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(70,  now + 0.18);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.2);
+      }
+
+      playBounce(isWall = true) {
+        if (this.muted) return;
+        this.init();
+        const now      = this.ctx.currentTime;
+        const osc      = this.ctx.createOscillator();
+        const gain     = this.ctx.createGain();
+        const baseFreq = isWall ? 300 : 170;
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.09);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.1);
+      }
+
+      playRim() {
+        if (this.muted) return;
+        this.init();
+        const now  = this.ctx.currentTime;
+        const osc  = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(950, now);
+        osc.frequency.setValueAtTime(750, now + 0.02);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.14);
+      }
+
+      playScore() {
+        if (this.muted) return;
+        this.init();
+        const now   = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5-E5-G5-C6 arpeggio
+        notes.forEach((freq, idx) => {
+          const t    = now + idx * 0.08;
+          const osc  = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.32);
+        });
+      }
+
+      playWin() {
+        if (this.muted) return;
+        this.init();
+        const now   = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50, 1318.51];
+        notes.forEach((freq, idx) => {
+          const t      = now + idx * 0.07;
+          const osc    = this.ctx.createOscillator();
+          const gain   = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(freq, t);
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(2000, t);
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.12, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+          osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(t); osc.stop(t + 0.28);
+        });
+      }
+
+      playClick() {
+        if (this.muted) return;
+        this.init();
+        const now  = this.ctx.currentTime;
+        const osc  = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.05);
+      }
+
+      // Paper crinkle swap sound
+      playDiscard() {
+        if (this.muted) return;
+        this.init();
+        const now        = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.12;
+        const buffer     = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data       = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise  = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(1200, now);
+        filter.frequency.exponentialRampToValueAtTime(320, now + 0.11);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+        noise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+
+      // Detuned dual-oscillator alarm buzzer
+      playBuzzer() {
+        if (this.muted) return;
+        this.init();
+        const now  = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc1.type = "sawtooth"; osc1.frequency.setValueAtTime(110, now);
+        osc2.type = "sawtooth"; osc2.frequency.setValueAtTime(114, now);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.linearRampToValueAtTime(0.35, now + 0.35);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+        osc1.connect(gain); osc2.connect(gain); gain.connect(this.ctx.destination);
+        osc1.start(now); osc2.start(now);
+        osc1.stop(now + 0.5); osc2.stop(now + 0.5);
+      }
+
+      // Squeaky squeegee wipe sound
+      playWipe() {
+        if (this.muted) return;
+        this.init();
+        const now     = this.ctx.currentTime;
+        const osc     = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.linearRampToValueAtTime(900, now + 0.08);
+        osc.frequency.linearRampToValueAtTime(500, now + 0.2);
+        oscGain.gain.setValueAtTime(0, now);
+        oscGain.gain.linearRampToValueAtTime(0.15, now + 0.04);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(oscGain); oscGain.connect(this.ctx.destination);
+        osc.start(now); osc.stop(now + 0.22);
+      }
+    }
+
+    // â”€â”€ Speech Synthesis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function unlockSpeechAPI() {
+      if (!window.speechSynthesis) return;
+      try {
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+        window.removeEventListener('touchstart', unlockSpeechAPI);
+        window.removeEventListener('click', unlockSpeechAPI);
+      } catch (e) { console.warn("Speech unlock failed:", e); }
+    }
+
+    let currentUtterance = null; // Prevent GC of utterance
+
+    function speakWord(word) {
+      if (!word || !window.speechSynthesis) {
+        console.warn("TTS Aborted: No word provided or speechSynthesis unsupported.");
+        return;
+      }
+      try {
+        console.log(`TTS: Canceling previous queue and preparing to speak: "${word}"`);
+        window.speechSynthesis.cancel();
+        
+        currentUtterance = new SpeechSynthesisUtterance(`Spell the word: ${word}`);
+        currentUtterance.rate  = 0.85; // kid-friendly speed
+        
+        if (window.speechSynthesis.getVoices) {
+          const voices  = window.speechSynthesis.getVoices();
+          const enVoice = voices.find(v => v.lang.startsWith("en") && v.localService) ||
+                          voices.find(v => v.lang.startsWith("en"));
+          if (enVoice) currentUtterance.voice = enVoice;
+        }
+
+        currentUtterance.onstart = (e) => {
+          console.log(`TTS Event: [onstart] successfully started speaking "${word}"`);
+        };
+        currentUtterance.onend = (e) => {
+          console.log(`TTS Event: [onend] finished speaking "${word}" after ${e.elapsedTime}ms`);
+        };
+        currentUtterance.onerror = (e) => {
+          console.error(`TTS Event: [onerror] failed to speak "${word}". Error: ${e.error}`);
+        };
+
+        window.speechSynthesis.speak(currentUtterance);
+        console.log(`TTS: Added utterance to synthesis queue.`);
+      } catch (e) { 
+        console.error("Speech speak function crashed:", e); 
+      }
+    }
+
+    // â”€â”€ Bootstrap audio & speech on first user gesture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const sfx = new SoundSynth();
+    window.addEventListener("click",      () => sfx.init());
+    window.addEventListener("touchstart", () => sfx.init());
+    window.addEventListener("click",      unlockSpeechAPI);
+    window.addEventListener("touchstart", unlockSpeechAPI);
+
+    // â”€â”€ Kaboom canvas initialization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    kaboom({ width: 480, height: 720, letterbox: true, background: [8, 8, 22] });
+
+
+
+    // â”€â”€ Color palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const PAL = {
+      batter:  [255, 210, 60],
+      ball:    [255, 80,  80],
+      hoop:    [60,  210, 255],
+      hoopRim: [20,  140, 200],
+      sling:   [180, 130, 60],
+      star:    [255, 220, 50],
+    };
+
+    // â”€â”€ Physics & layout constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const W            = 480;
+    const H            = 720;
+    const BATTER_Y     = H - 90;
+    const BATTER_X     = W / 2;
+    const HOOP_Y       = 96;
+    const DRAG_MAX     = 140;   // max pull distance (px)
+    const LAUNCH_SCALE = 14;    // launch velocity multiplier
+    const GRAVITY      = 600;
+    const BALL_R       = 13;
+    const HOOP_W       = 52;
+    const HOOP_H       = 36;
+    const BATTER_W     = 54;
+    const BATTER_H     = 50;
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- GLOBAL STATE ---
+    // Single object holding all mutable runtime state for the current session.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    let currentProfile = null;
+
+    const gameState = {
+      currentLevelIndex:     0,    // Index into LEVELS[]
+      totalGameScore:        0,    // Cumulative score (all levels)
+      totalShotsFired:       0,    // Cumulative shots (all levels)
+      totalBasketsScored:    0,    // Cumulative baskets (all levels)
+      levelShotsFired:       0,    // Shots this level
+      levelBasketsScored:    0,    // Baskets this level
+      strikes:               0,    // Hazard strikes this level (max 3)
+      currentWord:           "",   // Word currently being spelled
+      completedWords:        [],   // Words already spelled this level run
+      currentLetterIndex:    0,    // Next required letter index into currentWord
+      currentProjectileType: null, // Loaded PROJECTILES entry object
+      coins:                 0,
+      unlockedPlayerSkins:   ["default"],
+      equippedPlayerSkin:    "default",
+      unlockedBallColors:    ["white"],
+      equippedBallColor:     "white",
+      unlockedBackgrounds:   ["default"],
+      equippedBackground:    "default",
+    };
+
+    function resetGameStateToDefaults() {
+      gameState.coins = 0;
+      gameState.unlockedPlayerSkins = ["default"];
+      gameState.equippedPlayerSkin = "default";
+      gameState.unlockedBallColors = ["white"];
+      gameState.equippedBallColor = "white";
+      gameState.unlockedBackgrounds = ["default"];
+      gameState.equippedBackground = "default";
+      gameState.currentLevelIndex = 0;
+      gameState.totalGameScore = 0;
+      gameState.totalShotsFired = 0;
+      gameState.totalBasketsScored = 0;
+      gameState.strikes = 0;
+      gameState.completedWords = [];
+      gameState.currentWord = "";
+    }
+
+    function loadGame() {
+      if (currentProfile && currentProfile !== 'Guest') {
+        try {
+          const saved = localStorage.getItem('wackyball_' + currentProfile);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            Object.assign(gameState, parsed);
+          } else {
+            resetGameStateToDefaults();
+          }
+        } catch (e) {
+          console.warn("Storage restricted or parse error:", e);
+          resetGameStateToDefaults();
+        }
+      } else {
+        resetGameStateToDefaults();
+      }
+    }
+
+    function saveGame() {
+      if (!currentProfile || currentProfile === 'Guest') return;
+      try {
+        localStorage.setItem('wackyball_' + currentProfile, JSON.stringify(gameState));
+      } catch (e) {
+        console.warn("Storage restricted:", e);
+      }
+    }
+
+    // Scene-scoped drag / flight tracking (reset each scene load)
+    let dragging         = false;
+    let dragStart        = null;
+    let dragCurrent      = null;
+    let ball             = null;
+    let inFlight         = false;
+    let hoops            = [];
+    let netObjects       = [];
+    let letterBubbles    = [];
+    let targetWordLabel  = null;
+    let speakerBtn       = null;
+    let speakerBg        = null;
+    let obstacleObj      = null;
+    let curWindVal       = 0;
+    let isMenuPaused     = false;
+
+    // Keyboard aim state
+    let kbAimAngle       = -90; // degrees; -90 = straight up
+    let kbPullLength     = 0;
+    let usingKeyboardAim = false;
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- DICTIONARIES & DATA ---
+    // Level configurations, projectile catalogue, and per-level word pools.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    const LEVELS = [
+      { level:1, name:"Standard Play",    movingHoops:false, hasObstacle:false, wind:false, hoopSpeed:0,   desc:"Aim, pull, shoot. Simple unmoving targets." },
+      { level:2, name:"Wacky Hoops",      movingHoops:true,  hasObstacle:false, wind:false, hoopSpeed:80,  desc:"Stay focused! The hoops float left and right." },
+      { level:3, name:"Bounce Shield",    movingHoops:true,  hasObstacle:true,  wind:false, hoopSpeed:100, desc:"A rotating shield bounces balls in the center!" },
+      { level:4, name:"Wind Storm",       movingHoops:true,  hasObstacle:true,  wind:true,  hoopSpeed:110, desc:"Sidelining gusts change directions every shot!" },
+      { level:5, name:"Colson's Customs", movingHoops:true,  hasObstacle:true,  wind:false, hoopSpeed:120, desc:"Aim fast! Spelling Colson's custom words." },
+      { level:6, name:"Challenge Mode",   movingHoops:true,  hasObstacle:true,  wind:true,  hoopSpeed:130, desc:"The ultimate spelling test under high winds!" }
+    ];
+
+    const PROJECTILES = {
+      good: [
+        { type:"watermelon", name:"Watermelon",     isGood:true,  mass:1.0,  bounce:0.72 },
+        { type:"chicken",    name:"Rubber Chicken",  isGood:true,  mass:0.85, bounce:0.5  },
+        { type:"gum",        name:"Bubble Gum",      isGood:true,  mass:0.6,  bounce:0.96 },
+        { type:"beachball",  name:"Beach Ball",      isGood:true,  mass:0.38, bounce:0.8  },
+        { type:"soap",       name:"Soap Ball",       isGood:true,  mass:0.7,  bounce:0.82 }
+      ],
+      hazard: [
+        { type:"bowling",    name:"Bowling Ball",    isGood:false, mass:2.3,  bounce:0.35 },
+        { type:"anvil",      name:"Anvil",           isGood:false, mass:3.5,  bounce:0.15 },
+        { type:"mudpie",     name:"Mud Pie",         isGood:false, mass:0.8,  bounce:0.3  }
+      ]
+    };
+
+    // Per-level word pools (1-based level key)
+    const LEVEL_WORDS = {
+      1: ["CAT", "DOG", "PIG", "COW", "BAT", "BUG"],           // Pre-K / K (3 letters)
+      2: ["PLAY", "JUMP", "FROG", "BIRD", "FISH", "BEAR"],      // K / 1st Grade (4 letters)
+      3: ["APPLE", "HAPPY", "TIGER", "WATER", "SNAKE"],         // 1st Grade (5 letters)
+      4: ["YELLOW", "SCHOOL", "FRIEND", "MONKEY", "ORANGE"],    // 2nd Grade (6 letters)
+      5: ["COLSON", "BASEBALL", "CHICKEN", "TEACHER"],          // Colson's Customs
+      6: ["ELEPHANT", "DINOSAUR", "UMBRELLA", "ASTRONAUT"],     // 3rd Grade (Challenge)
+    };
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- HELPER FUNCTIONS ---
+    // Word selection, hoop-letter assignment, projectile loading,
+    // HUD sync, shared vector-reflection, and particle generators.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    /** Pick a random unused word for the current level; triggers level-win if pool is empty. */
+    function selectRandomWord() {
+      const words     = LEVEL_WORDS[gameState.currentLevelIndex + 1];
+      const available = words.filter(w => !gameState.completedWords.includes(w));
+      if (available.length === 0) { triggerLevelWin(); return null; }
+      gameState.currentWord = available[Math.floor(rand(0, available.length))];
+      // Autoplay speech removed; user taps speaker icon to hear.
+      return gameState.currentWord;
+    }
+
+    /** Assign the correct next letter to one random hoop; fill others with decoy letters. */
+    function assignHoopLetters() {
+      if (gameState.currentLetterIndex >= gameState.currentWord.length) return;
+      const correctLetter  = gameState.currentWord[gameState.currentLetterIndex];
+      const correctHoopIdx = Math.floor(rand(0, hoops.length));
+      const alphabet       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      hoops.forEach((hoop, idx) => {
+        if (idx === correctHoopIdx) {
+          hoop.letter = correctLetter;
+        } else {
+          let randomL;
+          do { randomL = alphabet[Math.floor(rand(0, alphabet.length))]; }
+          while (randomL === correctLetter);
+          hoop.letter = randomL;
+        }
+      });
+    }
+
+    /** Pick a new random projectile (74% good / 26% hazard) and sync the discard button. */
+    function loadRandomProjectile() {
+      const isGood = rand(0, 1) < 0.74;
+      let list = isGood ? [...PROJECTILES.good] : PROJECTILES.hazard;
+      
+      if (isGood && gameState.equippedBallColor !== "white") {
+        list.push({ type: "cosmetic", name: "Custom Ball", isGood: true, mass: 0.6, bounce: 0.8 });
+      }
+
+      gameState.currentProjectileType = list[Math.floor(rand(0, list.length))];
+      
+    }
+
+    /** Sync the three strike HUD markers to gameState.strikes. */
+    function updateStrikesHUD() {
+      // (DOM logic removed)
+    }
+
+    /**
+     * Shared vector-reflection used by both the obstacle and trash-can colliders.
+     * Reflects ball velocity off the surface normal and nudges ball outside the collider.
+     */
+    function reflectBall(b, colliderPos, pushRadius) {
+      const normal   = b.pos.sub(colliderPos).unit();
+      const velocity = vec2(b.vx, b.vy);
+      const dotVal   = velocity.dot(normal);
+      if (dotVal < 0) {
+        const reflected = velocity.sub(normal.scale(2 * dotVal)).scale(b.bounce);
+        b.vx  = reflected.x;
+        b.vy  = reflected.y;
+        b.pos = colliderPos.add(normal.scale(pushRadius));
+      }
+    }
+
+    // â”€â”€ Projectile vector renderers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    function drawWatermelon(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(40,160,40), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      for (let offset = -radius+4; offset < radius; offset += 5) {
+        if (offset === 0) continue;
+        drawLine({ p1:pos.add(vec2(offset*0.6,-radius*0.8)), p2:pos.add(vec2(offset*0.95,0)), width:2, color:rgb(15,80,15), opacity:alpha });
+        drawLine({ p1:pos.add(vec2(offset*0.95,0)), p2:pos.add(vec2(offset*0.6,radius*0.8)), width:2, color:rgb(15,80,15), opacity:alpha });
+      }
+    }
+
+    function drawChicken(pos, radius, alpha = 1.0) {
+      drawRect({ pos:pos.add(vec2(0,3)), width:radius*1.3, height:radius*2.1, radius:6, anchor:"center", color:rgb(255,225,40), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawCircle({ pos:pos.add(vec2(0,-radius*0.9)),          radius:radius*0.38, color:rgb(240,40,40),   opacity:alpha });
+      drawRect({ pos:pos.add(vec2(radius*0.45,-radius*0.4)),  width:radius*0.5, height:radius*0.3, anchor:"center", color:rgb(255,140,0), opacity:alpha });
+      drawCircle({ pos:pos.add(vec2(radius*0.1,-radius*0.55)), radius:1.5, color:rgb(0,0,0), opacity:alpha });
+    }
+
+    function drawGum(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(255,110,180), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawCircle({ pos:pos.add(vec2(-radius*0.3,-radius*0.3)), radius:radius*0.22, color:rgb(255,255,255), opacity:alpha*0.75 });
+    }
+
+    function drawBeachBall(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(245,245,245), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawLine({ p1:pos.add(vec2(0,-radius)),          p2:pos.add(vec2(0,radius)),          width:3.5, color:rgb(255,70,70),   opacity:alpha });
+      drawLine({ p1:pos.add(vec2(-radius,0)),           p2:pos.add(vec2(radius,0)),           width:3.5, color:rgb(60,200,255),  opacity:alpha });
+      drawLine({ p1:pos.add(vec2(-radius*0.7,-radius*0.7)), p2:pos.add(vec2(radius*0.7,radius*0.7)), width:3.5, color:rgb(255,215,0), opacity:alpha });
+    }
+
+    function drawBowling(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(60,62,72), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawCircle({ pos:pos.add(vec2(-3.5,-3.5)), radius:2.2, color:rgb(15,15,20), opacity:alpha });
+      drawCircle({ pos:pos.add(vec2( 3.5,-3.5)), radius:2.2, color:rgb(15,15,20), opacity:alpha });
+      drawCircle({ pos:pos.add(vec2( 0,   3.5)), radius:2.2, color:rgb(15,15,20), opacity:alpha });
+    }
+
+    function drawAnvil(pos, radius, alpha = 1.0) {
+      drawRect({ pos:pos.add(vec2(0,-3)),           width:radius*1.9, height:radius*0.65, anchor:"center", color:rgb(90,95,110), opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawRect({ pos:pos.add(vec2(-radius*0.45,5)), width:radius*0.9, height:radius*1.0,  anchor:"center", color:rgb(75,80,95),  opacity:alpha, outline:{color:rgb(15,15,25),width:1.5} });
+      drawRect({ pos:pos.add(vec2(radius*0.5,-3)),  width:radius*0.8, height:radius*0.45, anchor:"center", color:rgb(90,95,110), opacity:alpha });
+    }
+
+    function drawSoapBall(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(180,240,255), opacity:alpha*0.85, outline:{color:rgb(60,200,255),width:1.5} });
+      drawCircle({ pos:pos.add(vec2(-radius*0.35,-radius*0.35)), radius:radius*0.2,  color:rgb(255,255,255), opacity:alpha*0.9 });
+      drawCircle({ pos:pos.add(vec2( radius*0.3,  radius*0.2)),  radius:radius*0.24, color:rgb(255,255,255), opacity:alpha*0.5 });
+    }
+
+    function drawMudPie(pos, radius, alpha = 1.0) {
+      drawCircle({ pos, radius, color:rgb(120,80,50), opacity:alpha, outline:{color:rgb(60,40,25),width:1.5} });
+      drawCircle({ pos:pos.add(vec2(-4,-4)), radius:3, color:rgb(75,50,30), opacity:alpha });
+      drawCircle({ pos:pos.add(vec2( 4, 2)), radius:4, color:rgb(75,50,30), opacity:alpha });
+      drawCircle({ pos:pos.add(vec2(-2, 5)), radius:2, color:rgb(60,40,25), opacity:alpha });
+    }
+
+    function drawCosmeticBall(pos, radius, alpha, colorName) {
+      let col = rgb(255,255,255);
+      if (colorName === "gold") col = rgb(255, 215, 0);
+      else if (colorName === "neon") col = rgb(0, 255, 255);
+      
+      drawCircle({ pos, radius, color: col, opacity: alpha, outline: { color: rgb(20, 20, 30), width: 1.5 } });
+      drawCircle({ pos: pos.add(vec2(-radius*0.3, -radius*0.3)), radius: radius*0.25, color: rgb(255,255,255), opacity: alpha*0.7 });
+    }
+
+    /** Dispatch to the correct projectile renderer by type string. */
+    function drawProjectile(type, pos, radius, alpha = 1.0) {
+      if      (type === "watermelon") drawWatermelon(pos, radius, alpha);
+      else if (type === "chicken")    drawChicken(pos, radius, alpha);
+      else if (type === "gum")        drawGum(pos, radius, alpha);
+      else if (type === "beachball")  drawBeachBall(pos, radius, alpha);
+      else if (type === "soap")       drawSoapBall(pos, radius, alpha);
+      else if (type === "bowling")    drawBowling(pos, radius, alpha);
+      else if (type === "anvil")      drawAnvil(pos, radius, alpha);
+      else if (type === "mudpie")     drawMudPie(pos, radius, alpha);
+      else if (type === "cosmetic")   drawCosmeticBall(pos, radius, alpha, gameState.equippedBallColor);
+    }
+
+    /** Burst colourful confetti rectangles from an optional origin. */
+    function addConfetti(opt = {}) {
+      for (let i = 0; i < 40; i++) {
+        const p = add([
+          pos(opt.pos ?? vec2(0,0)),
+          rect(rand(6,12), rand(6,12), { radius:2 }),
+          color(hsl2rgb(rand(0,1), 0.8, 0.6)),
+          opacity(1), lifespan(2.5), rotate(rand(0,360)), anchor("center"), z(20)
+        ]);
+        const gravity = 700, drag = 0.92;
+        const head = rand(-35,35) - 90, rad = (head*Math.PI)/180, spd = rand(300,700);
+        let vx = Math.cos(rad)*spd, vy = Math.sin(rad)*spd;
+        const spin = rand(-150,150);
+        p.onUpdate(() => {
+          vy += gravity*dt(); p.pos.x += vx*dt(); p.pos.y += vy*dt();
+          p.angle += spin*dt(); p.opacity -= 0.45*dt(); vx *= drag; vy *= drag;
+        });
+      }
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- GAMEPLAY ENTITIES ---
+    // Water/mud penalty overlay logic and discard helper.
+    // Kaboom entity spawning (batter, hoops, trashcan, obstacle) lives inside
+    // scene("game") where it has access to scene-scoped Kaboom functions.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    // DOM refs for penalty overlays
+
+    // Swipe gesture state for both overlays
+    let wipeCount = 0, isWiping = false, wipeStartX = 0, wipeStartY = 0;
+    let mudWipeCount = 0, isMudWiping = false, mudWipeStartX = 0, mudWipeStartY = 0;
+
+    
+    function triggerThreeStrikesPenalty() {
+      isMenuPaused = true; sfx.stopStretch();
+      if (ball) { destroy(ball); ball = null; }
+      sfx.playBuzzer();
+      
+      const overlay = add([
+        rect(W, H),
+        color(0, 50, 150),
+        opacity(0.85),
+        z(100),
+        area(),
+        "penalty_overlay"
+      ]);
+      
+      const inst = add([
+        text("Tap 3 times to wipe!", { size: 24, font: "monospace" }),
+        pos(W/2, H/2 + 200),
+        anchor("center"),
+        color(100, 200, 255),
+        z(101),
+        "penalty_overlay"
+      ]);
+
+      wipeCount = 0;
+      
+      overlay.onClick(() => {
+        wipeCount++;
+        sfx.playWipe();
+        overlay.opacity -= 0.3;
+        if (wipeCount >= 3) {
+          destroyAll("penalty_overlay");
+          isMenuPaused = false;
+          gameState.strikes = 0;
+          updateStrikesHUD();
+        }
+      });
+    }
+
+    function triggerMudSplatter() {
+      if (!inFlight) return;
+      if (ball && ball.hasStruck) return;
+      if (ball) ball.hasStruck = true;
+
+      isMenuPaused = true; sfx.stopStretch();
+      sfx.playBuzzer();
+      
+      const overlay = add([
+        rect(W, H),
+        color(60, 40, 20),
+        opacity(0.95),
+        z(100),
+        area(),
+        "penalty_overlay"
+      ]);
+
+      const inst = add([
+        text("Tap 3 times to wipe!", { size: 24, font: "monospace" }),
+        pos(W/2, H/2 + 200),
+        anchor("center"),
+        color(255, 150, 100),
+        z(101),
+        "penalty_overlay"
+      ]);
+
+      mudWipeCount = 0;
+      
+      overlay.onClick(() => {
+        mudWipeCount++;
+        sfx.playWipe();
+        overlay.opacity -= 0.3;
+        if (mudWipeCount >= 3) {
+          destroyAll("penalty_overlay");
+          isMenuPaused = false;
+          loadRandomProjectile();
+        }
+      });
+    }
+/** Discard currently loaded projectile and replace it randomly. */
+    function discardCurrentItem() {
+      if (inFlight || isMenuPaused) return;
+      sfx.playDiscard(); loadRandomProjectile();
+      const bat = get("batter")[0];
+      if (bat) { bat.scale = vec2(1.2); bat.happyTimer = 0.5; }
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // --- CORE SCENES ---
+    // Main gameplay loop: entity spawning, collision logic,
+    // win/loss conditions, and all input handlers.
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    scene("game", () => {
+
+      const config = LEVELS[gameState.currentLevelIndex];
+
+      // â”€â”€ HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+      // Economy UI
+      const coinsHUD = add([
+        text(`Coins: ${gameState.coins}`, { size: 18, font: "monospace" }),
+        pos(W - 15, 20),
+        anchor("topright"),
+        color(255, 215, 0),
+        z(10),
+        "coinsHUD"
+      ]);
+
+      const btnShop = add([
+        rect(80, 30, { radius: 8 }),
+        pos(W - 55, 55),
+        anchor("center"),
+        color(50, 150, 50),
+        area({ cursor: "pointer" }),
+        z(10),
+        "btnShop"
+      ]);
+      btnShop.add([text("SHOP", { size: 14, font: "monospace" }), anchor("center"), color(255, 255, 255)]);
+      btnShop.onClick(() => { 
+        sfx.playClick();
+
+        
+        
+        go("shop"); 
+      });
+
+      // â”€â”€ Reset scene-level state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      dragging = false; dragStart = null; dragCurrent = null;
+      ball = null; inFlight = false;
+      hoops = []; netObjects = []; letterBubbles = [];
+      obstacleObj = null;
+      gameState.currentLetterIndex = 0;
+      gameState.levelShotsFired    = 0;
+      gameState.levelBasketsScored = 0;
+      gameState.strikes            = 0;
+      wipeCount = 0; mudWipeCount = 0;
+      kbPullLength = 0; kbAimAngle = -90; usingKeyboardAim = false;
+
+      updateStrikesHUD();
+      loadRandomProjectile();
+      curWindVal = config.wind ? rand(-150, 150) : 0;
+
+      // â”€â”€ Background stars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      for (let i = 0; i < 50; i++) {
+        add([pos(rand(0,W),rand(0,H*0.75)), circle(rand(0.5,2.5)), color(...PAL.star), opacity(rand(0.15,0.65)), z(0)]);
+      }
+
+      // â”€â”€ Ground â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      add([rect(W,16), pos(0,H-20), color(32,32,60), area(), "ground", z(1)]);
+
+      // â”€â”€ Word selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (!gameState.currentWord || gameState.completedWords.length === 0) {
+        selectRandomWord();
+      }
+
+      /**
+       * Build (or rebuild) the target-word label, speaker icon, and letter-bubble row
+       * for gameState.currentWord. Destroys any existing Kaboom instances first.
+       * This single function replaces the formerly duplicated bubble-build blocks.
+       */
+      function buildLetterBubbles() {
+        if (targetWordLabel) destroy(targetWordLabel);
+        letterBubbles.forEach(b => { destroy(b.bg); destroy(b.txt); destroy(b.outlineCircle); });
+        letterBubbles = [];
+        gameState.currentLetterIndex = 0;
+
+        // Target word label
+        targetWordLabel = add([
+          text("Target: "+gameState.currentWord,{size:10,font:"monospace"}),
+          pos(W/2,40),
+          anchor("center"),
+          color(140,140,160),
+          area({cursor:"pointer"}),
+          z(3)
+        ]);
+
+        targetWordLabel.onClick(() => {
+          gameState.coins += 1;
+          saveGame();
+          const coinsHUD = get("coinsHUD")[0];
+          if (coinsHUD) coinsHUD.text = `Coins: ${gameState.coins}`;
+          const cf = add([text("+1", {size: 14, font: "monospace"}), pos(targetWordLabel.pos.x + 60, targetWordLabel.pos.y), color(255,215,0), z(5)]);
+          cf.onUpdate(() => { cf.pos.y -= 30 * dt(); cf.opacity -= dt() * 1.5; if(cf.opacity <= 0) destroy(cf); });
+
+          speakWord(gameState.currentWord);
+          targetWordLabel.scale = vec2(1.2);
+          wait(0.1, () => { targetWordLabel.scale = vec2(1.0); });
+        });
+
+        // Letter bubbles row
+        const wordArr = gameState.currentWord.split("");
+        const startX  = W/2 - ((wordArr.length-1)*36)/2;
+        for (let i = 0; i < wordArr.length; i++) {
+          const lx = startX + i*36;
+          const outlineCircle = add([circle(15), pos(lx,70), color(40,40,75), opacity(0.4), z(1)]);
+          const bg            = add([circle(14), pos(lx,70), color(20,20,36), opacity(0.9), scale(1), z(2)]);
+          const txt           = add([text("_",{size:14,font:"monospace"}), pos(lx,70), anchor("center"), color(100,100,120), scale(1), z(3)]);
+          letterBubbles.push({ bg, txt, outlineCircle, letter:wordArr[i] });
+        }
+
+        assignHoopLetters();
+      }
+
+      // â”€â”€ Hoops & nets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      const HOOP_COLS    = 4;
+      const HOOP_SPACING = W / (HOOP_COLS + 1);
+
+      for (let i = 0; i < HOOP_COLS; i++) {
+        const hx = HOOP_SPACING * (i+1), hy = HOOP_Y;
+
+        // Flexible net child
+        const net = add([
+          pos(hx,hy), z(3),
+          {
+            flexY:0, flexSpeed:0,
+            draw() {
+              const f=this.flexY, lX=-HOOP_W/2+4, rX=HOOP_W/2-4, mX=0, tY=0, bY=HOOP_H/2+10;
+              const pLT=vec2(lX,tY), pRT=vec2(rX,tY);
+              const pLM=vec2(lX+4+f*0.25,tY+12), pRM=vec2(rX-4-f*0.25,tY+12);
+              const pBL=vec2(mX-7,bY+f), pBR=vec2(mX+7,bY+f);
+              const C={color:rgb(255,255,255)};
+              drawLine({p1:pLT,p2:pLM,width:1.5,...C,opacity:0.4}); drawLine({p1:pLM,p2:pBL,width:1.5,...C,opacity:0.4});
+              drawLine({p1:pRT,p2:pRM,width:1.5,...C,opacity:0.4}); drawLine({p1:pRM,p2:pBR,width:1.5,...C,opacity:0.4});
+              drawLine({p1:vec2(mX,tY),p2:vec2(mX,bY+f),width:1.5,...C,opacity:0.25});
+              drawLine({p1:pLT,p2:pRM,width:1,...C,opacity:0.3}); drawLine({p1:pRT,p2:pLM,width:1,...C,opacity:0.3});
+              drawLine({p1:pLM,p2:pBR,width:1,...C,opacity:0.3}); drawLine({p1:pRM,p2:pBL,width:1,...C,opacity:0.3});
+            },
+            update() {
+              const force=-180*this.flexY; this.flexSpeed+=force*dt();
+              this.flexSpeed*=Math.exp(-9*dt()); this.flexY+=this.flexSpeed*dt();
+            }
+          }
+        ]);
+
+        // Hoop backboard collider
+        const hoop = add([
+          rect(HOOP_W,HOOP_H,{radius:2}), pos(hx,hy), anchor("center"),
+          color(...PAL.hoop), opacity(0.24),
+          area({shape:new Rect(vec2(0),HOOP_W,HOOP_H)}),
+          "hoop", z(4),
+          {
+            id:i, initialX:hx, initialY:hy, initialIndex:i,
+            dir:i%2===0?1:-1, scored:false, stained:false, netRef:net, letter:"",
+            draw() {
+              const tY=-HOOP_H/2, bY=HOOP_H/2-5, lX=-HOOP_W/2;
+              const rc=this.stained?rgb(40,180,40):rgb(...PAL.hoopRim);
+              drawRect({width:HOOP_W,height:5,pos:vec2(lX,tY),color:rc});
+              drawRect({width:HOOP_W,height:5,pos:vec2(lX,bY),color:rc});
+              if(this.stained){
+                drawCircle({pos:vec2(-12,-4),radius:5,color:rgb(30,140,30),opacity:0.75});
+                drawCircle({pos:vec2( 10, 4),radius:4,color:rgb(30,140,30),opacity:0.75});
+                drawCircle({pos:vec2(  2,-6),radius:3,color:rgb(20,100,20),opacity:0.8});
+                drawCircle({pos:vec2( -4, 6),radius:6,color:rgb(40,160,40),opacity:0.7});
+              }
+              drawText({text:this.letter||"",size:20,font:"monospace",pos:vec2(0,-1),anchor:"center",color:this.stained?rgb(80,160,80):rgb(255,255,255)});
+            }
+          }
+        ]);
+
+        hoop.onUpdate(() => {
+          if (config.movingHoops && !isMenuPaused) {
+            hoop.pos.x += hoop.dir * config.hoopSpeed * dt();
+            const lb = hoop.initialX - HOOP_SPACING/2 + 10;
+            const rb = hoop.initialX + HOOP_SPACING/2 - 10;
+            if (hoop.pos.x < lb) { hoop.pos.x = lb; hoop.dir =  1; }
+            if (hoop.pos.x > rb) { hoop.pos.x = rb; hoop.dir = -1; }
+            net.pos.x = hoop.pos.x;
+          }
+        });
+
+        hoops.push(hoop); netObjects.push(net);
+      }
+
+      buildLetterBubbles();
+
+      // â”€â”€ Trash Can â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      const trashCan = add([
+        pos(45,200), anchor("center"), area({shape:new Rect(vec2(0),40,50)}),
+        "trashcan", z(4), scale(1),
+        {
+          draw() {
+            drawRect({width:34,height:44,radius:4,pos:vec2(-17,-22),color:rgb(70,75,85),outline:{color:rgb(100,255,100),width:1.5}});
+            drawRect({width:38,height:6, radius:2,pos:vec2(-19,-25),color:rgb(40,200,40)});
+            drawRect({width:12,height:4, radius:1,pos:vec2(-6, -29),color:rgb(90,95,105)});
+            drawLine({p1:vec2(-8,-12),p2:vec2(-8,12),width:2,color:rgb(45,50,58)});
+            drawLine({p1:vec2( 0,-12),p2:vec2( 0,12),width:2,color:rgb(45,50,58)});
+            drawLine({p1:vec2( 8,-12),p2:vec2( 8,12),width:2,color:rgb(45,50,58)});
+            drawRect({width:10,height:10,radius:2,pos:vec2(-5,-5),color:rgb(40,200,40),outline:{color:rgb(255,255,255),width:1}});
+          },
+          update() { this.scale = this.scale.lerp(vec2(1), dt()*10); }
+        }
+      ]);
+      add([text("RECYCLE",{size:7,font:"monospace"}), pos(45,162), anchor("center"), color(100,255,100), z(4)]);
+
+      // â”€â”€ Rotating obstacle (Level 3+) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (config.hasObstacle) {
+        obstacleObj = add([
+          rect(100,16,{radius:4}), pos(W/2,H/2-20), anchor("center"),
+          color(180,50,255), outline(2,rgb(255,255,255)),
+          area(), rotate(0), "obstacle", z(4),
+          { angleSpeed:60, update(){ if(!isMenuPaused) this.angle+=this.angleSpeed*dt(); } }
+        ]);
+      }
+
+      // â”€â”€ Slingshot poles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      const POLE_H = 38;
+      add([rect(5,POLE_H), pos(BATTER_X-28, BATTER_Y-POLE_H+12), color(...PAL.sling), z(2)]);
+      add([rect(5,POLE_H), pos(BATTER_X+23, BATTER_Y-POLE_H+12), color(...PAL.sling), z(2)]);
+
+      // â”€â”€ Animated batter character â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      const batter = add([
+        pos(BATTER_X,BATTER_Y), anchor("center"),
+        area({shape:new Rect(vec2(0),BATTER_W,BATTER_H)}),
+        scale(1,1), "batter", z(5),
+        {
+          blinkTimer:2.5, sadTimer:0, happyTimer:0, gaspTimer:0, lookDir:vec2(0),
+          draw() {
+            const skin = gameState.equippedPlayerSkin;
+            if (skin === "macaroni") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:24,anchor:"center",color:rgb(255,200,50),outline:{color:rgb(200,100,20),width:3}});
+            } else if (skin === "noodle") {
+              drawRect({width:BATTER_W-20,height:BATTER_H+30,radius:12,anchor:"center",color:rgb(255,50,150),outline:{color:rgb(150,20,80),width:3}});
+              drawLine({p1:vec2(-10, -BATTER_H/2), p2:vec2(10, -BATTER_H/2), width:3, color:rgb(150,20,80)});
+            } else if (skin === "ballplayer") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(240,180,140),outline:{color:rgb(20,20,30),width:3}});
+              drawRect({width:BATTER_W+14,height:10,radius:3,pos:vec2(0,-BATTER_H/2-4),anchor:"center",color:rgb(20,50,200)});
+              drawRect({width:BATTER_W,height:16,radius:8,pos:vec2(0,-BATTER_H/2-10),anchor:"center",color:rgb(20,50,200)});
+              drawText({text:"24",pos:vec2(0,-BATTER_H/2-12),size:14,font:"monospace",anchor:"center",color:rgb(255,255,255)});
+            } else if (skin === "red_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(255,80,80),outline:{color:rgb(20,20,30),width:3}});
+            } else if (skin === "green_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,255,80),outline:{color:rgb(20,20,30),width:3}});
+            } else if (skin === "blue_boy") {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(80,150,255),outline:{color:rgb(20,20,30),width:3}});
+            } else {
+              drawRect({width:BATTER_W,height:BATTER_H,radius:12,anchor:"center",color:rgb(...PAL.batter),outline:{color:rgb(20,20,30),width:3}});
+            }
+            const eL=vec2(-12,-8).add(this.lookDir), eR=vec2(12,-8).add(this.lookDir);
+            if (this.sadTimer > 0) {
+              drawLine({p1:eL.sub(vec2(4,4)), p2:eL.add(vec2(4,4)),  width:2.5,color:rgb(20,20,20)});
+              drawLine({p1:eL.add(vec2(-4,4)),p2:eL.add(vec2(4,-4)), width:2.5,color:rgb(20,20,20)});
+              drawLine({p1:eR.sub(vec2(4,4)), p2:eR.add(vec2(4,4)),  width:2.5,color:rgb(20,20,20)});
+              drawLine({p1:eR.add(vec2(-4,4)),p2:eR.add(vec2(4,-4)), width:2.5,color:rgb(20,20,20)});
+              drawCircle({pos:vec2(0,10),radius:4,color:rgb(20,20,20)});
+            } else {
+              const blink = this.blinkTimer < 0.15;
+              if (blink) {
+                drawLine({p1:eL.sub(vec2(6,0)),p2:eL.add(vec2(6,0)),width:3,color:rgb(20,20,20)});
+                drawLine({p1:eR.sub(vec2(6,0)),p2:eR.add(vec2(6,0)),width:3,color:rgb(20,20,20)});
+              } else {
+                drawCircle({pos:eL,radius:6.5,color:rgb(255,255,255)});
+                drawCircle({pos:eR,radius:6.5,color:rgb(255,255,255)});
+                const p=this.lookDir.scale(0.3);
+                drawCircle({pos:eL.add(p),radius:3,color:rgb(0,0,0)});
+                drawCircle({pos:eR.add(p),radius:3,color:rgb(0,0,0)});
+              }
+              if      (this.happyTimer>0) drawCircle({pos:vec2(0,8),radius:7,color:rgb(20,20,20)});
+              else if (this.gaspTimer >0) drawCircle({pos:vec2(0,8),radius:5,color:rgb(20,20,20)});
+              else drawText({text:"~",pos:vec2(0,4),size:16,font:"monospace",anchor:"center",color:rgb(20,20,20)});
+            }
+          },
+          update() {
+            if (isMenuPaused) return;
+            this.blinkTimer -= dt(); if(this.blinkTimer<=0) this.blinkTimer=rand(2,5.5);
+            if(this.sadTimer  >0) this.sadTimer  -=dt();
+            if(this.happyTimer>0) this.happyTimer-=dt();
+            if(this.gaspTimer >0) this.gaspTimer -=dt();
+            if (dragging && dragCurrent) {
+              this.lookDir=this.lookDir.lerp(dragStart.sub(dragCurrent).unit().scale(3.5),dt()*12);
+            } else if (ball && inFlight) {
+              this.lookDir=this.lookDir.lerp(ball.pos.sub(this.pos).unit().scale(3.5),dt()*12);
+            } else {
+              this.lookDir=this.lookDir.lerp(vec2(0),dt()*6);
+            }
+            this.scale=this.scale.lerp(vec2(1,1),dt()*10);
+          }
+        }
+      ]);
+
+      // â”€â”€ Slingshot elastic & aim trajectory overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      add([pos(0,0), z(4), {
+        draw() {
+          if (dragging && dragCurrent && !isMenuPaused) {
+            const pull = clampPull(dragCurrent);
+            drawLine({p1:vec2(BATTER_X-25,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...PAL.sling)});
+            drawLine({p1:vec2(BATTER_X+23,BATTER_Y-20),p2:pull,width:3.5,color:rgb(...PAL.sling)});
+            if (gameState.currentProjectileType) drawProjectile(gameState.currentProjectileType.type,pull,BALL_R,1.0);
+            const vx=(dragStart.x-pull.x)*LAUNCH_SCALE, vy=(dragStart.y-pull.y)*LAUNCH_SCALE;
+            const pMass = gameState.currentProjectileType ? gameState.currentProjectileType.mass : 1.0;
+            for (let t=0.05; t<0.85; t+=0.065) {
+              let px=dragStart.x+vx*t, py=dragStart.y+vy*t+0.5*(GRAVITY*pMass)*t*t;
+              if (config.wind) px+=0.5*curWindVal*t*t;
+              drawCircle({pos:vec2(px,py),radius:3.5,color:rgb(255,255,255),opacity:(1-t/0.85)*0.7});
+            }
+          } else if (!inFlight && gameState.currentProjectileType && !isMenuPaused) {
+            drawProjectile(gameState.currentProjectileType.type, vec2(BATTER_X,BATTER_Y-20), BALL_R, 1.0);
+          }
+        }
+      }]);
+
+      // â”€â”€ Wind indicator HUD (Level 4 only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (config.wind) {
+        add([pos(W-75,130), z(5), {
+          draw() {
+            drawRect({width:64,height:32,radius:6,color:rgb(12,12,32),opacity:0.5,outline:{color:rgb(255,255,255),width:1,opacity:0.1}});
+            const ao=curWindVal>0?15:-15, ds=Math.sign(curWindVal), tX=32+ao*0.6;
+            drawLine({p1:vec2(32-ao*0.6,16),p2:vec2(tX,16),width:2.5,color:rgb(60,210,255)});
+            drawLine({p1:vec2(tX,16),p2:vec2(tX-5*ds,12),width:2,color:rgb(60,210,255)});
+            drawLine({p1:vec2(tX,16),p2:vec2(tX-5*ds,20),width:2,color:rgb(60,210,255)});
+            drawText({text:`${Math.abs(Math.round(curWindVal))} W`,size:8,pos:vec2(32,25),anchor:"center",color:rgb(255,255,255),opacity:0.8});
+          }
+        }]);
+        // Wind drift particle lines
+        onUpdate(() => {
+          if (!isMenuPaused && rand(0,1)<dt()*3) {
+            const wd=Math.sign(curWindVal);
+            add([rect(rand(35,75),1.5,{radius:1}),pos(wd>0?-40:W+40,rand(70,H-180)),
+              color(255,255,255),opacity(rand(0.08,0.18)),lifespan(2.8),z(1),"windLine",
+              {update(){if(!isMenuPaused)this.pos.x+=(curWindVal*1.6+wd*80)*dt();}}]);
+          }
+        });
+      }
+
+      // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Scene-local functions
+      // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+      function clampPull(cur) {
+        const dx=cur.x-dragStart.x, dy=cur.y-dragStart.y, dist=Math.sqrt(dx*dx+dy*dy);
+        if (dist>DRAG_MAX) { const r=DRAG_MAX/dist; return vec2(dragStart.x+dx*r,dragStart.y+dy*r); }
+        return vec2(cur.x,cur.y);
+      }
+
+      function isHoveringBatter(p) {
+        return p.x>=BATTER_X-BATTER_W/2-15 && p.x<=BATTER_X+BATTER_W/2+15 &&
+               p.y>=BATTER_Y-BATTER_H/2-15 && p.y<=BATTER_Y+BATTER_H/2+15;
+      }
+
+      function spawnBall(startPos, vx, vy) {
+        if (ball) destroy(ball);
+        inFlight = true;
+        batter.scale = vec2(0.7,1.4); batter.gaspTimer = 0.6;
+        const proj = gameState.currentProjectileType;
+
+        // Per-type trail colour map
+        const TRAIL_COLORS = {
+          watermelon:[74,180,74], chicken:[255,220,50], gum:[255,120,180],
+          beachball:[200,200,250], bowling:[80,80,90], anvil:[110,115,130],
+        };
+
+        ball = add([
+          circle(BALL_R), pos(startPos), color(255,255,255), area(), z(4),
+          {
+            vx, vy, type:proj.type, isGood:proj.isGood, mass:proj.mass, bounce:proj.bounce, lastTrailTime:0,
+            draw() { drawProjectile(this.type,vec2(0,0),BALL_R,1.0); },
+            update() {
+              if (isMenuPaused) return;
+              if (config.wind) this.vx += curWindVal*dt();
+              this.vx *= 1-0.012*dt()*60; // air resistance
+              this.vy += GRAVITY*this.mass*dt();
+              this.pos.x += this.vx*dt(); this.pos.y += this.vy*dt();
+
+              // Colour-matched trail
+              if (time()-this.lastTrailTime>0.035) {
+                this.lastTrailTime=time();
+                const tc=TRAIL_COLORS[this.type]||PAL.ball;
+                add([circle(BALL_R-3),pos(this.pos),color(...tc),opacity(0.35),lifespan(0.25),anchor("center"),z(3),
+                  {update(){this.opacity=Math.max(0,this.opacity-dt()*1.5);}}]);
+              }
+
+              // Wall / ceiling boundaries
+              let hitWall=false;
+              if(this.pos.x-BALL_R<0){ this.pos.x=BALL_R;    if(this.isGood){this.vx*=-this.bounce;sfx.playBounce(true);}else hitWall=true; }
+              if(this.pos.x+BALL_R>W){ this.pos.x=W-BALL_R;  if(this.isGood){this.vx*=-this.bounce;sfx.playBounce(true);}else hitWall=true; }
+              if(this.pos.y-BALL_R<0){ this.pos.y=BALL_R;    if(this.isGood){this.vy*=-this.bounce;sfx.playBounce(true);}else hitWall=true; }
+              if (hitWall) {
+                if(this.type==="mudpie") triggerMudSplatter(); else triggerStrike();
+                destroy(this); ball=null; inFlight=false; wait(0.6,loadRandomProjectile); return;
+              }
+
+              // Bottom boundary (miss)
+              if (this.pos.y>H+40) {
+                inFlight=false; destroy(this); ball=null;
+                batter.sadTimer=1.2; loadRandomProjectile();
+              }
+
+              checkHoops();
+            }
+          },
+          "ball"
+        ]);
+      }
+
+      function checkHoops() {
+        if (!ball || !inFlight || isMenuPaused) return;
+
+        if (!ball.isGood) {
+          for (const h of hoops) {
+            const dx=ball.pos.x-h.pos.x, dy=ball.pos.y-h.pos.y;
+            if (Math.abs(dx)<HOOP_W/2+BALL_R && Math.abs(dy)<HOOP_H/2+BALL_R) {
+              sfx.playRim();
+              if(ball.type==="mudpie") triggerMudSplatter(); else triggerStrike();
+              destroy(ball); ball=null; inFlight=false; wait(0.6,loadRandomProjectile); return;
+            }
+          }
+          return;
+        }
+
+        for (const h of hoops) {
+          if (h.stained) {
+            if (ball.type==="soap") {
+              const dx=ball.pos.x-h.pos.x, dy=ball.pos.y-h.pos.y;
+              if (Math.abs(dx)<HOOP_W/2-2 && Math.abs(dy)<HOOP_H/2+3) {
+                h.stained=false; h.netRef.flexY=24; h.netRef.flexSpeed=160;
+                sfx.playScore(); spawnBubbleSparks(h.pos.x,h.pos.y);
+                destroy(ball); inFlight=false; wait(0.6,loadRandomProjectile); return;
+              }
+            }
+            continue; // stained hoops skip normal scoring
+          }
+          if (h.scored) continue;
+
+          const dx=ball.pos.x-h.pos.x, dy=ball.pos.y-h.pos.y;
+          if (Math.abs(dx)<HOOP_W/2-2 && Math.abs(dy)<HOOP_H/2+3) {
+            h.scored=true; h.netRef.flexY=24; h.netRef.flexSpeed=160;
+            h.opacity=0.9; wait(0.2,()=>{h.opacity=0.24;});
+            sfx.playScore(); spawnSparks(h.pos.x,h.pos.y);
+            if (ball.type==="watermelon") { spawnWatermelonSplat(h.pos.x,h.pos.y); h.stained=true; }
+            if (h.letter===gameState.currentWord[gameState.currentLetterIndex]) {
+              gameState.totalGameScore+=25; gameState.levelBasketsScored++; gameState.totalBasketsScored++;
+              lightUpNextLetter();
+            } else {
+              triggerStrike();
+            }
+          }
+        }
+      }
+
+      function lightUpNextLetter() {
+        if (gameState.currentLetterIndex>=gameState.currentWord.length) return;
+        const bubble=letterBubbles[gameState.currentLetterIndex];
+        bubble.txt.text=bubble.letter;
+        bubble.bg.color=rgb(...PAL.star); bubble.bg.opacity=1.0;
+        bubble.txt.color=rgb(12,12,28);
+        bubble.outlineCircle.color=rgb(255,255,255); bubble.outlineCircle.opacity=0.8;
+        bubble.bg.scale=vec2(1.6); bubble.txt.scale=vec2(1.6);
+        bubble.bg.onUpdate(()=>{bubble.bg.scale=bubble.bg.scale.lerp(vec2(1),dt()*10);});
+        bubble.txt.onUpdate(()=>{bubble.txt.scale=bubble.txt.scale.lerp(vec2(1),dt()*10);});
+        spawnSparks(bubble.bg.pos.x,bubble.bg.pos.y);
+        batter.happyTimer=0.85;
+        gameState.currentLetterIndex++;
+        if (gameState.currentLetterIndex===gameState.currentWord.length) { wait(0.5,triggerWordWin); }
+        else { assignHoopLetters(); }
+      }
+
+      function triggerWordWin() {
+        gameState.completedWords.push(gameState.currentWord);
+        sfx.playWin(); addConfetti({pos:vec2(W/2,H/3)});
+        isMenuPaused = true;
+
+        const winUI = add([ pos(W/2, H/2), z(10), "winUI" ]);
+        winUI.add([text("Level Complete", {size:24, font:"monospace"}), anchor("center"), color(255,210,60), pos(0,-20)]);
+        winUI.add([text("Tap to Continue", {size:16, font:"monospace"}), anchor("center"), color(100,255,100), pos(0,20)]);
+
+        const tapArea = add([rect(W, H), pos(0,0), opacity(0), area(), z(9), "winUI"]);
+        tapArea.onClick(() => {
+          destroyAll("winUI");
+          isMenuPaused = false;
+          const nw=selectRandomWord(); 
+          if(nw) {
+            buildLetterBubbles();
+            speakWord(gameState.currentWord); // Announce the NEW word!
+          }
+        });
+      }
+
+      function triggerLevelWin() {
+      isMenuPaused=true; sfx.playWin();
+        if (ball) { destroy(ball); ball=null; }
+        addConfetti({pos:vec2(W/2,H/3)}); addConfetti({pos:vec2(W/4,H/3)}); addConfetti({pos:vec2(3*W/4,H/3)});
+        wait(1.5, () => {
+          if (gameState.totalGameScore>highScore) {
+            highScore=gameState.totalGameScore;
+            localStorage.setItem("wacky_highscore",highScore.toString());
+            
+          }
+          showLevelUpOverlay();
+        });
+      }
+
+      function triggerStrike() {
+      if (!inFlight) return;
+      if (ball && ball.hasStruck) return;
+      if (ball) ball.hasStruck = true;
+
+      gameState.strikes++; updateStrikesHUD(); sfx.playBuzzer(); shake(18);
+        batter.sadTimer=1.5;
+        const alertText = add([text("STRIKE!", { size: 64, font: "monospace" }), pos(W/2, H/2), anchor("center"), color(255, 50, 50), z(100)]); wait(1, () => destroy(alertText));
+        if (gameState.strikes>=3) {
+          isMenuPaused=true; sfx.stopStretch();
+          wait(1.2, ()=>{ if(ball){destroy(ball);ball=null;} triggerThreeStrikesPenalty(); });
+        }
+      }
+
+      // â”€â”€ Particle helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+      function spawnSparks(cx,cy) {
+        for (let i=0;i<15;i++) {
+          const a=rand(0,Math.PI*2), spd=rand(80,240);
+          add([circle(rand(2,6)),pos(cx,cy),color(rand(80,255),rand(180,255),rand(180,255)),opacity(1),z(8),
+            {pvx:Math.cos(a)*spd,pvy:Math.sin(a)*spd,life:0,
+             update(){if(isMenuPaused)return;this.life+=dt();this.pos.x+=this.pvx*dt();this.pos.y+=this.pvy*dt();this.opacity=Math.max(0,1-this.life*2.2);if(this.life>0.5)destroy(this);}}]);
+        }
+      }
+
+      function spawnBubbleSparks(cx,cy) {
+        for (let i=0;i<15;i++) {
+          add([circle(rand(3,8)),pos(cx,cy),color(150,230,255),opacity(0.8),z(5),
+            move(rand(0,360),rand(40,120)),lifespan(0.6,{fade:true}),
+            {update(){this.pos.y-=30*dt();}}]);
+        }
+      }
+
+      function spawnTrashSuccessSparks(cx,cy) {
+        for (let i=0;i<20;i++) {
+          const a=rand(0,Math.PI*2), spd=rand(100,300);
+          add([circle(rand(2,6)),pos(cx,cy),color(rand(50,100),rand(200,255),rand(50,100)),opacity(1),z(8),
+            {pvx:Math.cos(a)*spd,pvy:Math.sin(a)*spd,life:0,
+             update(){if(isMenuPaused)return;this.life+=dt();this.pos.x+=this.pvx*dt();this.pos.y+=this.pvy*dt();this.pvy+=250*dt();this.opacity=Math.max(0,1-this.life*1.8);if(this.life>0.6)destroy(this);}}]);
+        }
+      }
+
+      function spawnWatermelonSplat(cx,cy) {
+        for (let i=0;i<3+Math.floor(rand(0,3));i++) {
+          const rx=cx+rand(-24,24), ry=cy+rand(-15,25), radius=rand(6,16), opacityVal=rand(0.55,0.85);
+          const splat=add([pos(rx,ry),z(1),"splat",{
+            opacity:opacityVal,
+            draw(){
+              drawCircle({pos:vec2(0,0),radius,color:rgb(74,180,74),opacity:this.opacity});
+              for(let j=0;j<4;j++){const ang=rand(0,2*Math.PI),dist=rand(radius,radius*1.85);drawCircle({pos:vec2(Math.cos(ang)*dist,Math.sin(ang)*dist),radius:rand(1.5,3.5),color:rgb(74,180,74),opacity:this.opacity});}
+            }
+          }]);
+          wait(rand(1.5,3.2), ()=>{ splat.onUpdate(()=>{splat.opacity=Math.max(0.35,splat.opacity-dt()*0.08);}); });
+        }
+      }
+
+      // â”€â”€ Colliders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      if (config.hasObstacle) {
+        onCollide("ball","obstacle",(b,obs)=>{ sfx.playRim(); reflectBall(b,obs.pos,BALL_R+14); });
+      }
+
+      onCollide("ball","trashcan",(b,trash)=>{
+        if (!inFlight) return;
+        if (!b.isGood) {
+          sfx.playScore(); gameState.totalGameScore+=50;
+          spawnTrashSuccessSparks(trash.pos.x,trash.pos.y);
+          trash.scale=vec2(1.3); destroy(b); inFlight=false; ball=null;
+          const fb=add([text("+50 Recycle!",{size:12,font:"monospace"}),pos(trash.pos.x+30,trash.pos.y-10),anchor("left"),color(100,255,100),lifespan(1.0),z(10)]);
+          fb.onUpdate(()=>{fb.pos.y-=30*dt();}); wait(0.6,loadRandomProjectile);
+        } else {
+          sfx.playRim(); reflectBall(b,trash.pos,BALL_R+25);
+        }
+      });
+
+      // â”€â”€ Mouse input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      onMousePress("left",()=>{
+        if(isMenuPaused||inFlight) return;
+        const p=mousePos();
+        if(isHoveringBatter(p)){dragging=true;usingKeyboardAim=false;dragStart=vec2(BATTER_X,BATTER_Y-20);dragCurrent=vec2(p.x,p.y);sfx.playClick();}
+      });
+      onMouseMove(()=>{
+        if(!dragging||isMenuPaused) return;
+        const p=mousePos(); dragCurrent=vec2(p.x,p.y);
+        const pct=Math.min(1.0,dragStart.dist(dragCurrent)/DRAG_MAX);
+        sfx.playStretch(pct); batter.scale=vec2(1+pct*0.25,1-pct*0.35);
+      });
+      onMouseRelease("left",()=>{
+        if(!dragging) return; sfx.stopStretch();
+        if(dragStart.dist(mousePos())<15){dragging=false;dragCurrent=null;discardCurrentItem();}
+        else fireShot();
+      });
+
+      // â”€â”€ Touch input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      onTouchStart((pos)=>{
+        if(isMenuPaused||inFlight) return;
+        if(isHoveringBatter(pos)){dragging=true;usingKeyboardAim=false;dragStart=vec2(BATTER_X,BATTER_Y-20);dragCurrent=vec2(pos.x,pos.y);sfx.playClick();}
+      });
+      onTouchMove((pos)=>{
+        if(!dragging||isMenuPaused) return;
+        dragCurrent=vec2(pos.x,pos.y);
+        const pct=Math.min(1.0,dragStart.dist(dragCurrent)/DRAG_MAX);
+        sfx.playStretch(pct); batter.scale=vec2(1+pct*0.2,1-pct*0.3);
+      });
+      onTouchEnd(()=>{
+        if(!dragging) return; sfx.stopStretch();
+        if(dragStart.dist(dragCurrent||vec2(0,0))<15){dragging=false;dragCurrent=null;discardCurrentItem();}
+        else fireShot();
+      });
+
+      // â”€â”€ Keyboard aim scheme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      onKeyDown("left",()=>{if(isMenuPaused||inFlight)return;usingKeyboardAim=true;kbAimAngle=Math.max(-160,kbAimAngle-90*dt());});
+      onKeyDown("right",()=>{if(isMenuPaused||inFlight)return;usingKeyboardAim=true;kbAimAngle=Math.min(-20,kbAimAngle+90*dt());});
+      onKeyDown("space",()=>{
+        if(isMenuPaused||inFlight) return;
+        usingKeyboardAim=true; dragging=true;
+        dragStart=vec2(BATTER_X,BATTER_Y-20);
+        kbPullLength=Math.min(DRAG_MAX,kbPullLength+160*dt());
+        const ar=(kbAimAngle*Math.PI)/180;
+        dragCurrent=dragStart.sub(vec2(Math.cos(ar),Math.sin(ar)).scale(kbPullLength));
+        const pct=kbPullLength/DRAG_MAX; sfx.playStretch(pct); batter.scale=vec2(1+pct*0.2,1-pct*0.35);
+      });
+      onKeyRelease("space",()=>{if(!dragging||!usingKeyboardAim)return;sfx.stopStretch();fireShot();});
+      onKeyPress("return",()=>{discardCurrentItem();});
+
+      // Developer cheat codes for testing
+      onKeyPress("w",()=>{triggerLevelWin();});
+      onKeyPress("c",()=>{lightUpNextLetter();});
+      onKeyPress("s",()=>{triggerThreeStrikesPenalty();});
+
+      function fireShot() {
+        dragging=false; if(!dragCurrent) return;
+        const pull=clampPull(dragCurrent);
+        const vx=(dragStart.x-pull.x)*LAUNCH_SCALE, vy=(dragStart.y-pull.y)*LAUNCH_SCALE;
+        if (vy<-60) {
+          gameState.levelShotsFired++; gameState.totalShotsFired++; sfx.playLaunch();
+          if(gameState.currentProjectileType.isGood) hoops.forEach(h=>{h.scored=false;});
+          spawnBall(vec2(BATTER_X,BATTER_Y-20),vx,vy);
+        } else {
+          batter.scale=vec2(1.2,0.8); // aborted shot spring-back
+        }
+        dragCurrent=null; kbPullLength=0;
+      }
+
+    }); // end scene("game")
+
+    function resetStats() {
+      gameState.currentLevelIndex=0; gameState.totalGameScore=0; gameState.totalShotsFired=0;
+      gameState.totalBasketsScored=0; gameState.levelShotsFired=0; gameState.levelBasketsScored=0;
+      gameState.strikes=0; gameState.completedWords=[]; gameState.currentWord="";
+    }
+
+    function showLevelUpOverlay() {
+      alert(`Word Spelled! +${gameState.levelBasketsScored*25} Score`);
+      gameState.currentLevelIndex++;
+      if(gameState.currentLevelIndex < LEVELS.length){
+        isMenuPaused = false;
+        gameState.completedWords = [];
+        gameState.currentWord = "";
+        go("game");
+      } else {
+        showVictoryOverlay();
+      }
+    }
+
+    function showVictoryOverlay() {
+      alert(`ðŸ† GAME CLEARED! Total Score: ${gameState.totalGameScore}`);
+      resetStats();
+      go("menu");
+    }
+
+    function showFailOverlay() {
+      alert(`âš ï¸ LEVEL FAILED. 3 Strikes!`);
+      resetStats();
+      go("menu");
+    }
+
+    function triggerPause() {
+      isMenuPaused = !isMenuPaused;
+      if (isMenuPaused) {
+        sfx.stopStretch();
+      }
+    }
+
+    window.addEventListener("keydown",(e)=>{if(e.key==="Escape"){sfx.playClick();triggerPause();}});
+
+    // â”€â”€ Cosmetics Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const SHOP_BACKGROUNDS = [
+      { id: "default", name: "Deep Space", cost: 0 },
+      { id: "sunset", name: "Neon Sunset", cost: 15 },
+      { id: "matrix", name: "Matrix Grid", cost: 30 }
+    ];
+
+    const SHOP_SKINS = [
+      { id: "default", name: "Default Boy", cost: 0 },
+      { id: "red_boy", name: "Red Skin", cost: 5 },
+      { id: "green_boy", name: "Green Skin", cost: 5 },
+      { id: "blue_boy", name: "Blue Skin", cost: 5 },
+      { id: "macaroni", name: "Macaroni", cost: 20 },
+      { id: "noodle", name: "Pool Noodle", cost: 30 },
+      { id: "ballplayer", name: "Ball Player", cost: 50 }
+    ];
+    
+    const SHOP_BALLS = [
+      { id: "white", name: "Standard", cost: 0 },
+      { id: "red", name: "Red Ball", cost: 5 },
+      { id: "green", name: "Green Ball", cost: 5 },
+      { id: "purple", name: "Purple Ball", cost: 5 },
+      { id: "gold", name: "Gold Ball", cost: 10 },
+      { id: "neon", name: "Neon Blue", cost: 15 }
+    ];
+
+    // â”€â”€ Rich UI Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function createRichButton(txt, p, onClickFn, colorBase = [50, 100, 200]) {
+      const w = 260; const h = 60;
+      // Shadow
+      const shadow = add([rect(w, h, { radius: 12 }), pos(p.x, p.y + 6), anchor("center"), color(0, 0, 0), opacity(0.3), z(10)]);
+      // Button
+      const btn = add([rect(w, h, { radius: 12 }), pos(p.x, p.y), anchor("center"), color(...colorBase), area({cursor:"pointer"}), z(11)]);
+      // Highlight/gradient illusion
+      const hl = btn.add([rect(w - 6, h/2 - 4, { radius: 8 }), pos(0, -h/4 + 2), anchor("center"), color(255, 255, 255), opacity(0.15)]);
+      // Text
+      const label = btn.add([text(txt, { size: 20, font: "monospace", transform: (idx) => ({ color: rgb(255,255,255) }) }), anchor("center")]);
+
+      btn.onHoverUpdate(() => {
+        btn.scale = vec2(1.05); shadow.scale = vec2(1.05);
+        btn.color = rgb(colorBase[0]+30, colorBase[1]+30, colorBase[2]+30);
+      });
+      btn.onHoverEnd(() => {
+        btn.scale = vec2(1); shadow.scale = vec2(1);
+        btn.color = rgb(...colorBase);
+      });
+      btn.onClick(() => {
+        sfx.playClick();
+        btn.pos.y += 4; shadow.pos.y -= 2;
+        wait(0.1, () => {
+          btn.pos.y -= 4; shadow.pos.y += 2;
+          onClickFn();
+        });
+      });
+      return btn;
+    }
+
+    function addAnimatedBackground() {
+      let c1 = [10, 20, 40], c2 = [40, 10, 30];
+      if (gameState.equippedBackground === "sunset") {
+        c1 = [40, 10, 20]; c2 = [80, 40, 10];
+      } else if (gameState.equippedBackground === "matrix") {
+        c1 = [5, 20, 5]; c2 = [10, 40, 10];
+      }
+      
+      const bgColors = [
+        add([rect(W, H), color(...c1), z(0)]), 
+        add([rect(W, H), color(...c2), z(0), opacity(0)]), 
+      ];
+      let t = 0;
+      onUpdate(() => {
+        t += dt();
+        bgColors[1].opacity = (Math.sin(t * 0.5) + 1) / 2;
+      });
+      
+      // Floating stars/bubbles
+      for(let i=0; i<15; i++) {
+        const r = rand(2, 6);
+        const p = add([circle(r), pos(rand(0,W), rand(0,H)), color(255,255,255), opacity(rand(0.1, 0.4)), z(1)]);
+        p.onUpdate(() => {
+          p.pos.y -= dt() * (10/r);
+          p.pos.x += Math.sin(time() + i) * dt() * 10;
+          if (p.pos.y < -10) p.pos.y = H + 10;
+        });
+      }
+    }
+
+    // â”€â”€ Main Menu Scene â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    scene("menu", () => {
+      addAnimatedBackground();
+
+      // Floating Logo
+      const logo = add([sprite("logo"), pos(W/2, 180), anchor("center"), scale(0.25), z(5)]);
+      logo.onUpdate(() => {
+        logo.pos.y = 120 + Math.sin(time() * 2) * 10;
+      });
+
+      if (currentProfile === null) {
+        let isEnteringName = false;
+        
+        const btnCreate = createRichButton("Create / Load Profile", vec2(W/2, 440), () => {
+          if (isEnteringName) return;
+          isEnteringName = true;
+          // Spawn Native Input UI
+          const overlay = add([rect(W, H), color(0,0,0), opacity(0.8), z(100), area()]);
+          const box = add([rect(300, 150, { radius: 16 }), pos(W/2, H/2), anchor("center"), color(30, 30, 50), z(101)]);
+          box.add([text("Enter Player Name:", { size: 18, font: "monospace" }), pos(0, -40), anchor("center"), color(255, 255, 255)]);
+          
+          let nameInput = "";
+          const nameTxt = box.add([text("_", { size: 24, font: "monospace" }), pos(0, 10), anchor("center"), color(100, 255, 100)]);
+          
+          const enterPrompt = box.add([text("Press ENTER to save", { size: 12, font: "monospace" }), pos(0, 50), anchor("center"), color(150, 150, 150)]);
+
+          const charListener = onCharInput((ch) => {
+            if (nameInput.length < 12 && /[a-zA-Z0-9 ]/.test(ch)) {
+              nameInput += ch;
+              nameTxt.text = nameInput + "_";
+            }
+          });
+          const keyListener = onKeyPress("backspace", () => {
+            nameInput = nameInput.slice(0, -1);
+            nameTxt.text = nameInput + "_";
+          });
+          const enterListener = onKeyPress("enter", () => {
+            if (nameInput.trim().length > 0) {
+              currentProfile = nameInput.trim();
+              loadGame();
+              charListener.cancel(); keyListener.cancel(); enterListener.cancel();
+              wait(0.01, () => go("menu"));
+            }
+          });
+          // Close on click outside
+          overlay.onClick(() => {
+            charListener.cancel(); keyListener.cancel(); enterListener.cancel();
+            destroy(overlay); destroy(box);
+            isEnteringName = false;
+          });
+        }, [40, 180, 100]);
+
+        createRichButton("Free Play", vec2(W/2, 520), () => {
+          if (isEnteringName) return;
+          currentProfile = "Guest";
+          loadGame();
+          wait(0.01, () => go("menu"));
+        }, [180, 100, 40]);
+
+      } else {
+        add([text(`Welcome, ${currentProfile}!`, { size: 24, font: "monospace" }), pos(W/2, 220), anchor("center"), color(100, 255, 100), z(5)]);
+        add([text(`Coins: ${gameState.coins}`, { size: 18, font: "monospace" }), pos(W/2, 255), anchor("center"), color(255, 215, 0), z(5)]);
+
+        createRichButton("Play Game", vec2(W/2, 330), () => wait(0.01, () => go("game")), [50, 200, 50]);
+        createRichButton("Level Select", vec2(W/2, 410), () => wait(0.01, () => go("levelSelect")), [50, 100, 200]);
+        createRichButton("Visit Shop", vec2(W/2, 490), () => wait(0.01, () => go("shop")), [150, 50, 200]);
+        
+        const btnChange = add([text("Change Profile", { size: 14, font: "monospace" }), pos(W/2, 580), anchor("center"), color(150, 150, 150), area({cursor:"pointer"}), z(5)]);
+        btnChange.onHoverUpdate(() => btnChange.use(color(255, 255, 255)));
+        btnChange.onHoverEnd(() => btnChange.use(color(150, 150, 150)));
+        btnChange.onClick(() => { sfx.playClick(); currentProfile = null; wait(0.01, () => go("menu")); });
+      }
+    });
+
+    // â”€â”€ Level Select Scene â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    scene("levelSelect", () => {
+      addAnimatedBackground();
+      add([text("Select Level", { size: 36, font: "monospace" }), pos(W/2, 60), anchor("center"), color(255, 255, 255), z(5)]);
+
+      LEVELS.forEach((lvl, i) => {
+        const y = 140 + i * 80;
+        createRichButton(`Level ${lvl.level}: ${lvl.name}`, vec2(W/2, y), () => {
+          gameState.currentLevelIndex = i;
+          gameState.completedWords = [];
+          gameState.currentWord = "";
+          wait(0.01, () => go("game"));
+        }, [40, 150, 40]);
+      });
+
+      createRichButton("BACK", vec2(W/2, H - 80), () => wait(0.01, () => go("menu")), [150, 50, 50]);
+    });
+
+    // â”€â”€ Shop Scene â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    scene("shop", () => {
+      addAnimatedBackground();
+      add([text("WACKY SHOP", { size: 36, font: "monospace" }), pos(W/2, 50), anchor("center"), color(255, 215, 0), z(5)]);
+      const coinsTxt = add([text(`Coins: ${gameState.coins}`, { size: 20, font: "monospace" }), pos(W/2, 90), anchor("center"), color(255, 255, 255), z(5)]);
+
+            function createShopList(title, items, type, startY) {
+        add([text(title, { size: 20, font: "monospace" }), pos(W/2, startY), anchor("center"), color(150, 200, 255), z(5)]);
+        items.forEach((item, i) => {
+          const col = i % 2;
+          const rowIdx = Math.floor(i / 2);
+          const x = col === 0 ? W/2 - 115 : W/2 + 115;
+          const y = startY + 40 + rowIdx * 45;
+          const unlocked = (type === "skin" && gameState.unlockedPlayerSkins.includes(item.id)) ||
+                           (type === "ball" && gameState.unlockedBallColors.includes(item.id)) ||
+                           (type === "bg" && gameState.unlockedBackgrounds.includes(item.id));
+          const equipped = (type === "skin" && gameState.equippedPlayerSkin === item.id) ||
+                           (type === "ball" && gameState.equippedBallColor === item.id) ||
+                           (type === "bg" && gameState.equippedBackground === item.id);
+                           
+          let btnColor = unlocked ? (equipped ? [50, 200, 50] : [100, 100, 100]) : [200, 150, 50];
+          let statusTxt = equipped ? "EQP" : (unlocked ? "OWN" : `${item.cost}c`);
+          
+          const row = add([rect(210, 36, { radius: 6 }), pos(x, y), anchor("center"), color(...btnColor), area({cursor:"pointer"}), z(5)]);
+          row.add([text(item.name, { size: 12, font: "monospace" }), pos(-95, 0), anchor("left"), color(255,255,255)]);
+          const statLbl = row.add([text(statusTxt, { size: 12, font: "monospace" }), pos(95, 0), anchor("right"), color(255,255,255)]);
+
+          row.onClick(() => {
+            if (equipped) return;
+            if (unlocked) {
+              sfx.playClick();
+              if (type === "skin") gameState.equippedPlayerSkin = item.id;
+              if (type === "ball") gameState.equippedBallColor = item.id;
+              if (type === "bg") gameState.equippedBackground = item.id;
+              saveGame(); wait(0.01, () => go("shop"));
+            } else if (gameState.coins >= item.cost) {
+              sfx.playClick();
+              gameState.coins -= item.cost;
+              if (type === "skin") gameState.unlockedPlayerSkins.push(item.id);
+              if (type === "ball") gameState.unlockedBallColors.push(item.id);
+              if (type === "bg") gameState.unlockedBackgrounds.push(item.id);
+              saveGame(); wait(0.01, () => go("shop"));
+            } else {
+              sfx.playBuzzer();
+              row.use(color(200, 50, 50));
+              wait(0.2, () => row.use(color(...btnColor)));
+            }
+          });
+        });
+      }
+
+      createShopList("- Player Skins -", SHOP_SKINS, "skin", 130);
+      createShopList("- Ball Colors -", SHOP_BALLS, "ball", 320);
+      createShopList("- Backgrounds -", SHOP_BACKGROUNDS, "bg", 490);
+      
+      createRichButton("BACK", vec2(W/2, H - 60), () => wait(0.01, () => go("menu")), [150, 50, 50]);
+    });
+
+    // Kick off the game
+    go("menu");
+    </script>
+</body>
+</html>
